@@ -1,17 +1,7 @@
 import os
-import sys
-import textwrap
-from glob import glob
-from itertools import chain
-from pathlib import Path
 from datetime import datetime
 
 import isx
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
-from scipy import stats
 
 import algorithms
 
@@ -20,12 +10,12 @@ TEMP_DIR = os.path.join(BASE_DIR, "temp_output")
 
 ALGORITHMS = {
     "preprocess_min_image": lambda input_path: algorithms.preprocess_min_image([input_path], "temp_output")[0],
-    "preprocess_videos": lambda input_path: algorithms.preprocess_videos([input_path], "temp_output")[0],
-    "bandpass_filter_videos": lambda input_path: algorithms.bandpass_filter_videos([input_path], "temp_output")[0],
-    "motion_correction_videos": lambda input_path: algorithms.motion_correction_videos([input_path], "temp_output", "serie")[0],
-    "normalize_dff_videos": lambda input_path: algorithms.normalize_dff_videos([input_path], "temp_output")[0],
-    "extract_neurons_pca_ica": lambda input_path: algorithms.extract_neurons_pca_ica([input_path], "temp_output")[0],
-    "detect_events_in_cells": lambda input_path: algorithms.detect_events_in_cells([input_path], "temp_output")[0],
+    "preprocess_videos": lambda input_path: algorithms.preprocess_videos([input_path], "../temp_output")[0],
+    "bandpass_filter_videos": lambda input_path: algorithms.bandpass_filter_videos([input_path], "../temp_output")[0],
+    "motion_correction_videos": lambda input_path: algorithms.motion_correction_videos([input_path], "../temp_output", "serie")[0],
+    "normalize_dff_videos": lambda input_path: algorithms.normalize_dff_videos([input_path], "../temp_output")[0],
+    "extract_neurons_pca_ica": lambda input_path: algorithms.extract_neurons_pca_ica([input_path], "../temp_output")[0],
+    "detect_events_in_cells": lambda input_path: algorithms.detect_events_in_cells([input_path], "../temp_output")[0],
 }
 
 
@@ -84,7 +74,7 @@ def apply_algorithms(input_path: str, output_dir: str, algorithms: list):
 
 
 if __name__ == "__main__":
-    input_file = "2021-10-21-11-57-27_video_trig_0-efocus_1000-PP.isxd"
+    input_file = "../2021-10-21-11-57-27_video_trig_0-efocus_1000-PP.isxd"
     output_folder = "results"
     algos_to_run = [
         "preprocess_videos",
@@ -94,5 +84,5 @@ if __name__ == "__main__":
         "extract_neurons_pca_ica",
         "detect_events_in_cells"
     ]
-    os.makedirs("temp_output", exist_ok=True)
+    os.makedirs("../temp_output", exist_ok=True)
     apply_algorithms(input_file, output_folder, algos_to_run)

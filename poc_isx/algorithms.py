@@ -1,7 +1,7 @@
 import os
 
-import numpy as np
 import isx
+import numpy as np
 
 
 def preprocess_min_image(video_path: str) -> str:
@@ -17,15 +17,18 @@ def preprocess_min_image(video_path: str) -> str:
     isx.Image.write(output_path, movie.spacing, movie.data_type, min_image)
     return output_path
 
+
 def preprocess_videos(input_files, output_dir):
     pp_files = isx.make_output_file_paths(input_files, output_dir, 'PP')
     isx.preprocess(input_files, pp_files, spatial_downsample_factor=2)
     return pp_files
 
+
 def bandpass_filter_videos(input_files, output_dir):
     bp_files = isx.make_output_file_paths(input_files, output_dir, 'BP')
     isx.spatial_filter(input_files, bp_files, low_cutoff=0.005, high_cutoff=0.5)
     return bp_files
+
 
 def motion_correction_videos(input_files, output_dir, series_name):
     mean_proj_file = os.path.join(output_dir, f'{series_name}-mean_image.isxd')
@@ -39,24 +42,29 @@ def motion_correction_videos(input_files, output_dir, series_name):
         output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
     return mc_files
 
+
 def normalize_dff_videos(input_files, output_dir):
     dff_files = isx.make_output_file_paths(input_files, output_dir, 'DFF')
     isx.dff(input_files, dff_files, f0_type='mean')
     return dff_files
+
 
 def extract_neurons_pca_ica(input_files, output_dir, num_cells=180):
     ic_files = isx.make_output_file_paths(input_files, output_dir, 'PCA-ICA')
     isx.pca_ica(input_files, ic_files, num_cells, int(1.15 * num_cells), block_size=1000)
     return ic_files
 
+
 def detect_events_in_cells(cellset_files, output_dir, threshold=5):
     event_files = isx.make_output_file_paths(cellset_files, output_dir, 'ED')
     isx.event_detection(cellset_files, event_files, threshold=threshold)
     return event_files
 
+
 def auto_accept_reject_cells(cellset_files, event_files):
     filters = [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)]
     isx.auto_accept_reject(cellset_files, event_files, filters=filters)
+
 
 def longitudinal_registration(cellset_files, movie_files, output_dir):
     lr_cs_files = isx.make_output_file_paths(cellset_files, output_dir, 'LR')
@@ -66,6 +74,7 @@ def longitudinal_registration(cellset_files, movie_files, output_dir):
         cellset_files, lr_cs_files, input_movie_files=movie_files,
         output_movie_files=lr_movie_files, csv_file=lr_csv_file, accepted_cells_only=True)
     return lr_cs_files, lr_movie_files
+
 
 def export_results(movie_files, cellset_files, event_files, output_dir):
     tiff_movie_file = os.path.join(output_dir, 'DFF-LR.tif')
