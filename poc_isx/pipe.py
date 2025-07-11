@@ -74,7 +74,7 @@ def apply_algorithms(input_path: str, output_dir: str, algorithms: list):
 
 
 if __name__ == "__main__":
-    input_file = "../2021-10-21-11-57-27_video_trig_0-efocus_1000-PP.isxd"
+    input_file = "poc_isx/videos/prueba.isxd"
     output_folder = "results"
     algos_to_run = [
         "preprocess_videos",
