@@ -1,6 +1,6 @@
 class PipelineData:
-    def __init__(self, data):
-        self._data = data
+    def __init__(self, *data):
+        self._data = list(data)
 
     def data(self):
         return self._data

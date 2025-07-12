@@ -6,7 +6,7 @@ class Step:
         self._step_name = step_name
         self._step_function = step_function
         self._step_input = step_input
-        self._step_outputs = PipelineData(self._step_function(step_input.data()))
+        self._step_outputs = self._step_function(step_input)
 
     def step_output(self):
         return self._step_outputs

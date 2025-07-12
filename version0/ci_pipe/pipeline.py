@@ -2,9 +2,9 @@ from ci_pipe.pipeline_data import PipelineData
 from ci_pipe.step import Step
 
 
-class Pipeline:
+class CIPipe:
     def __init__(self, *inputs):
-        self._pipeline_inputs = PipelineData(list(inputs))
+        self._pipeline_inputs = PipelineData(*inputs)
         self._steps = []
 
     def output(self):

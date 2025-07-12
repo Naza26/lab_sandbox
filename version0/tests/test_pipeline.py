@@ -1,6 +1,7 @@
 import unittest
 
-from ci_pipe.pipeline import Pipeline
+from ci_pipe.pipeline import CIPipe
+from ci_pipe.pipeline_data import PipelineData
 
 
 class PipelineTestCase(unittest.TestCase):
@@ -9,7 +10,7 @@ class PipelineTestCase(unittest.TestCase):
         pipeline_raw_input = 0
 
         # When
-        pipeline = Pipeline(pipeline_raw_input)
+        pipeline = CIPipe(pipeline_raw_input)
 
         # Then
         self.assertEqual(pipeline.output(), [pipeline_raw_input])
@@ -19,7 +20,7 @@ class PipelineTestCase(unittest.TestCase):
         pipeline_raw_input = 0
 
         # When
-        pipeline = Pipeline(pipeline_raw_input).step("my_first_step", self._add_one)
+        pipeline = CIPipe(pipeline_raw_input).step("my_first_step", self._add_one)
 
         # Then
         expected_output = [1]
@@ -30,7 +31,7 @@ class PipelineTestCase(unittest.TestCase):
         pipeline_raw_input = 0
 
         # When
-        pipeline = (Pipeline(pipeline_raw_input)
+        pipeline = (CIPipe(pipeline_raw_input)
                     .step("my_first_step", self._add_one)
                     .step("my_second_step", self._add_one))
 
@@ -44,7 +45,7 @@ class PipelineTestCase(unittest.TestCase):
         another_raw_pipeline_input = 1
 
         # When
-        pipeline = (Pipeline(one_raw_pipeline_input, another_raw_pipeline_input)
+        pipeline = (CIPipe(one_raw_pipeline_input, another_raw_pipeline_input)
                     .step("my_first_step", self._sum_all))
 
         # Then
@@ -52,10 +53,10 @@ class PipelineTestCase(unittest.TestCase):
         self.assertEqual(pipeline.output(), expected_output)
 
     def _add_one(self, inputs):
-        return [inputs[0] + 1]
+        return PipelineData(inputs.data()[0] + 1) 
 
     def _sum_all(self, inputs):
-        return [sum(inputs)]
+        return PipelineData(sum(inputs.data()))
 
 
 if __name__ == '__main__':
