@@ -52,6 +52,7 @@ class PipelineTestCase(unittest.TestCase):
         expected_output = [2]
         self.assertEqual(pipeline.output(), expected_output)
 
+
     def _add_one(self, inputs):
         return PipelineData(inputs.data()[0] + 1) 
 

@@ -1,7 +1,6 @@
 from ci_pipe.pipeline_data import PipelineData
 from ci_pipe.step import Step
 
-
 class CIPipe:
     def __init__(self, *inputs):
         self._pipeline_inputs = PipelineData(*inputs)
