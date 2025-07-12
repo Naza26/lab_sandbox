@@ -1,5 +1,5 @@
-from backend.business.pipeline_data import PipelineData
-from backend.business.step import Step
+from ci_pipe.pipeline_data import PipelineData
+from ci_pipe.step import Step
 
 
 class Pipeline:

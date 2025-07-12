@@ -1,4 +1,4 @@
-from backend.business.pipeline_data import PipelineData
+from ci_pipe.pipeline_data import PipelineData
 
 
 class Step:

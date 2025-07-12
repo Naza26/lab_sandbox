@@ -1,6 +1,6 @@
 import unittest
 
-from backend.business.pipeline import Pipeline
+from ci_pipe.pipeline import Pipeline
 
 
 class PipelineTestCase(unittest.TestCase):
