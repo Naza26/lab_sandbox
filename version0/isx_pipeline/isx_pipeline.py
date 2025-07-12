@@ -7,7 +7,4 @@ class ISXPipeline(CIPipe):
         self._pipeline_inputs = PipelineData(*inputs)
         self._steps = []
         self._isx = isx
-
-    def read_movie(self, input_data):
-        self.step("read_movie", self._isx.Movie.read)
         
