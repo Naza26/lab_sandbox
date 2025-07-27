@@ -4,3 +4,5 @@ __pycache__/
 *.isxd
 .vscode/
 .idea
+isx_test/videos
+isx_test/output

@@ -1,12 +1,9 @@
-from ci_pipe.pipeline_data import PipelineData
-
-
 class Step:
-    def __init__(self, step_name, step_input, step_function):
+    def __init__(self, step_name, step_input, step_function, args):
         self._step_name = step_name
         self._step_function = step_function
         self._step_input = step_input
-        self._step_outputs = self._step_function(step_input)
+        self._step_outputs = self._step_function(step_input, *args)
 
     def step_output(self):
         return self._step_outputs
@@ -14,6 +11,6 @@ class Step:
     def info(self):
         return {
             "name": self._step_name,
-            "input": self._step_input.data(),
-            "output": self._step_outputs.data()
+            "input": self._step_input,
+            "output": self._step_outputs
         }

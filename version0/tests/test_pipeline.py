@@ -13,17 +13,18 @@ class PipelineTestCase(unittest.TestCase):
         pipeline = CIPipe(pipeline_raw_input)
 
         # Then
-        self.assertEqual(pipeline.output(), [pipeline_raw_input])
+        self.assertEqual(pipeline.output(), [0])
 
     def test_02_a_pipeline_can_execute_a_step_successfully(self):
         # Given
         pipeline_raw_input = 0
 
         # When
-        pipeline = CIPipe(pipeline_raw_input).step("my_first_step", self._add_one)
+        pipeline = (CIPipe(pipeline_raw_input)
+                    .step("my_first_step", self._add_one))
 
         # Then
-        expected_output = [1]
+        expected_output = {'result': 1}
         self.assertEqual(pipeline.output(), expected_output)
 
     def test_03_a_pipeline_can_execute_multiple_steps_successfully(self):
@@ -33,10 +34,10 @@ class PipelineTestCase(unittest.TestCase):
         # When
         pipeline = (CIPipe(pipeline_raw_input)
                     .step("my_first_step", self._add_one)
-                    .step("my_second_step", self._add_one))
+                    .step("my_second_step", self._add_another_one))
 
         # Then
-        expected_output = [2]
+        expected_output = {'result': 2}
         self.assertEqual(pipeline.output(), expected_output)
 
     def test_04_a_pipeline_with_more_than_one_input_executes_successfully(self):
@@ -49,7 +50,7 @@ class PipelineTestCase(unittest.TestCase):
                     .step("my_first_step", self._sum_all))
 
         # Then
-        expected_output = [2]
+        expected_output = {'result': 2}
         self.assertEqual(pipeline.output(), expected_output)
 
     def test_05_can_get_pipeline_info(self):
@@ -64,25 +65,28 @@ class PipelineTestCase(unittest.TestCase):
         info = pipeline.info()
 
         expected_info = {
-            "steps": [
+            'inputs': [1, 1],
+            'output': {'result': 2},
+            'steps': [
                 {
-                    "name": "my_first_step",
-                    "input": [1, 1],
-                    "output": [2]
+                    'input': [1, 1],
+                    'name': 'my_first_step',
+                    'output': {'result': 2}
                 }
-            ],
-            "inputs": [1, 1],
-            "output": [2]
+            ]
         }
 
         # Then
         self.assertEqual(info, expected_info)
 
     def _add_one(self, inputs):
-        return PipelineData(inputs.data()[0] + 1)
+        return {'result': inputs[0] + 1}
+
+    def _add_another_one(self, input):
+        return {'result': input['result'] + 1}
 
     def _sum_all(self, inputs):
-        return PipelineData(sum(inputs.data()))
+        return {'result': sum(inputs)}
 
 
 if __name__ == '__main__':
