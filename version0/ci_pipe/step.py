@@ -10,3 +10,10 @@ class Step:
 
     def step_output(self):
         return self._step_outputs
+
+    def info(self):
+        return {
+            "name": self._step_name,
+            "input": self._step_input.data(),
+            "output": self._step_outputs.data()
+        }

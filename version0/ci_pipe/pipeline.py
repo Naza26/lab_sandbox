@@ -21,3 +21,10 @@ class CIPipe:
 
     def _steps_are_empty(self):
         return len(self._steps) == 0
+
+    def info(self):
+        return {
+            "steps": [step.info() for step in self._steps],
+            "inputs": self._pipeline_inputs.data(),
+            "output": self.output()
+        }
