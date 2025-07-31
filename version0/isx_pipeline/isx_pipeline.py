@@ -1,18 +1,37 @@
 import os
-from ci_pipe.pipeline import CIPipe
+from ..ci_pipe.pipeline import CIPipe
+import json
 
 class ISXPipeline(CIPipe):
     def __init__(self, isx, output_folder, inputs):
         super().__init__(inputs)
-        self._output_folder = output_folder # Create folder...
-        self._steps = []
         self._isx = isx
-
+        self._steps = []
+        self._output_folder, self._trace_file = self.create_output_folder(output_folder, inputs)
 
     @classmethod
     def new(cls, isx, input_folder, output_folder="output"):
         inputs = cls._scan_files(input_folder)
         return cls(isx, output_folder, inputs)
+
+    def create_output_folder(self, output_folder, inputs):
+        os.makedirs(output_folder, exist_ok=True)
+
+        trace_path = os.path.join(output_folder, "trace.json")
+        if not os.path.exists(trace_path):
+            with open(trace_path, 'w') as f:
+                json.dump({
+                    "steps": [],
+                    "inputs": inputs,
+                    "output": []
+                }, f, indent=4)
+
+        return output_folder, trace_path
+    
+    def info(self):
+        with open(self._trace_file, "r") as f:
+            return json.load(f)
+
 
     @classmethod
     def _scan_files(self , input_folder: str):
