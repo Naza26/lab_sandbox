@@ -1,0 +1,16 @@
+services:
+  isx_job:
+    build: .
+    volumes:
+      - isx_install:/tmp/inscopix
+      - ./Inscopix_Data_Processing_1.9.6.sh:/opt/installer.sh:ro
+      - ./input:/data:ro
+      - ./output:/output
+    environment:
+      - EXPECTED_OUTPUT_FILE=/output/done.marker
+    entrypoint: ["/app/entrypoint.sh"]
+    tty: true
+    restart: "no"
+
+volumes:
+  isx_install:
