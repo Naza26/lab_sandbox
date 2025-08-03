@@ -1,13 +1,12 @@
-import os
 from ci_pipe.pipeline import CIPipe
+
 
 class ISXPipeline(CIPipe):
     def __init__(self, isx, output_folder, inputs):
         super().__init__(inputs)
-        self._output_folder = output_folder # Create folder...
+        self._output_folder = output_folder  # Create folder...
         self._steps = []
         self._isx = isx
-
 
     @classmethod
     def new(cls, isx, input_folder, output_folder="output"):
@@ -15,7 +14,7 @@ class ISXPipeline(CIPipe):
         return cls(isx, output_folder, inputs)
 
     @classmethod
-    def _scan_files(self , input_folder: str):
+    def _scan_files(self, input_folder: str):
         import os
         # Check existence
         files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith('.isxd')]
@@ -31,9 +30,9 @@ class ISXPipeline(CIPipe):
         pp_files = self._isx.make_output_file_paths(input_files, self._output_folder, 'PP')
         return self.step('Preprocess Videos', lambda files, pp: self.preprocess_result(files, pp), pp_files)
 
-    def preprocess_result(self,files, pp):
+    def preprocess_result(self, files, pp):
         self._isx.preprocess(files, pp)
-        return { 'videos': pp }
+        return {'videos': pp}
 
     # def bandpass_filter_videos(input_files, output_dir):
     #     bp_files = isx.make_output_file_paths(input_files, output_dir, 'BP')
