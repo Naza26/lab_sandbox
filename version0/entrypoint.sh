@@ -9,32 +9,46 @@ INPUT_FOLDER=/data
 OUTPUT_FOLDER=/output
 EXPECTED_OUTPUT=${EXPECTED_OUTPUT_FILE:-"${OUTPUT_FOLDER}/done.marker"}
 
-if [ ! -d "$GUI_WRAPPER_DIR" ]; then
-    echo "[entrypoint] Installing ISX into $INSTALL_BASE..."
-    mkdir -p "$INSTALL_BASE"
+# 1. Install if missing or corrupted
+if [ ! -x "$GUI_BIN" ]; then
+    echo "[entrypoint] ISX not properly installed or broken at $INSTALL_BASE; reinstalling..."
+
+    # wipe previous contents without removing the mount point itself
+    if [ -d "$INSTALL_BASE" ]; then
+        echo "[entrypoint] Cleaning previous install under $INSTALL_BASE..."
+        shopt -s dotglob
+        rm -rf "$INSTALL_BASE"/* || true
+        shopt -u dotglob
+    else
+        mkdir -p "$INSTALL_BASE"
+    fi
+
     pushd "$INSTALL_BASE" >/dev/null
 
     if [ ! -f /opt/installer.sh ]; then
-        echo "ERROR: /opt/installer.sh not found inside container. Listing /opt:"
+        echo "ERROR: installer missing at /opt/installer.sh"
         ls -la /opt
         exit 1
     fi
 
-    # Run installer without chmod since /opt/installer.sh is on read-only mount
-    bash /opt/installer.sh
+    echo "[entrypoint] Running installer noninteractively (skip license)..."
+    bash /opt/installer.sh --skip-license
 
     popd >/dev/null
+
+    if [ ! -x "$GUI_BIN" ]; then
+        echo "ERROR: Installation failed—GUI launcher still missing at '$GUI_BIN'."
+        ls -R "$(dirname "$GUI_WRAPPER_DIR")" | head -n 200
+        exit 2
+    fi
 else
-    echo "[entrypoint] ISX already installed."
+    echo "[entrypoint] ISX already installed and appears healthy."
 fi
-
-
-
 
 # 2. Launch GUI headlessly
 if [ ! -x "$GUI_BIN" ]; then
-    echo "ERROR: GUI launcher not found at '$GUI_BIN'"
-    exit 2
+    echo "ERROR: GUI launcher not found at '$GUI_BIN' after installation."
+    exit 3
 fi
 
 echo "[entrypoint] Starting ISX GUI via xvfb..."
