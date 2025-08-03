@@ -76,3 +76,9 @@ Or you can use a lambda function:
     .step("custom_step_name", lambda p: p.custom_step_name(positional_arg, named_arg=value2))
 )
 ```
+
+## Tracing
+There are some tracing methods available to help you debug the pipeline:
+
+In any step, you can call `pipe.trace()` or `pipe.info()` to print the current state of the pipeline, including the current step and any parameters set so far.
+
