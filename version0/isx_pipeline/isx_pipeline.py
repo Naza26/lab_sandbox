@@ -28,7 +28,8 @@ class ISXPipeline(CIPipe):
         input_files = self.next_step_input()
 
         pp_files = self._isx.make_output_file_paths(input_files, self._output_folder, 'PP')
-        return self.step('Preprocess Videos', lambda files, pp: self.preprocess_result(files, pp), pp_files)
+        output = self.step('Preprocess Videos', lambda files, pp: self.preprocess_result(files, pp), pp_files)
+        return output
 
     def preprocess_result(self, files, pp):
         self._isx.preprocess(files, pp)
