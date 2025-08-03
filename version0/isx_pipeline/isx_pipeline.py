@@ -75,7 +75,7 @@ class ISXPipeline(CIPipe):
         with open(self._trace_file, "w") as f:
             json.dump(trace, f, indent=4)
 
-    def info(self):
+    def trace(self):
         with open(self._trace_file, "r") as f:
             return json.load(f)
 
