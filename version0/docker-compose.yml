@@ -1,17 +1,19 @@
 version: "3.9"
 
 services:
-  isx_job:
+  isx_installer:
     build: .
     volumes:
-      - isx_install:/tmp/inscopix
+      - isx_python_api:/tmp/inscopix
       - ./Inscopix_Data_Processing_1.9.6.sh:/opt/installer.sh:ro
       - ./input:/data:ro
       - ./output:/output
+      - ./:/app:rw
     environment:
       - EXPECTED_OUTPUT_FILE=/output/done.marker
+    working_dir: /app
     tty: true
     restart: "no"
 
 volumes:
-  isx_install:
+  isx_python_api:
