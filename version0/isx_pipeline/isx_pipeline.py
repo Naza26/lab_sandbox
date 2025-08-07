@@ -27,9 +27,7 @@ class ISXPipeline(CIPipe):
         return output_folder, trace_path
     
     def step(self, step_name, step_function, *args):
-        step_index = len(self._steps)
-        step_folder_name = f"step {step_index + 1} - {step_name}"
-        step_folder_path = os.path.join(self._output_folder, step_folder_name)
+        step_folder_path = self._step_folder_path(step_name)
         os.makedirs(step_folder_path, exist_ok=True)
 
         updated_args = []
@@ -47,7 +45,10 @@ class ISXPipeline(CIPipe):
 
         return result
     
-
+    def _step_folder_path(self, step_name):
+        step_index = len(self._steps)
+        step_folder_name = f"step {step_index + 1} - {step_name}"
+        return os.path.join(self._output_folder, step_folder_name)
 
     def _update_trace(self, step_info):
         with open(self._trace_file, "r") as f:
@@ -67,7 +68,7 @@ class ISXPipeline(CIPipe):
         step_number = str(len(self._steps))
 
         trace[step_number] = {
-            "algoritmo": step_info["name"],
+            "algorithm": step_info["name"],
             "input": extract_paths(step_info["input"]),
             "output": extract_paths(step_info["output"])
         }
@@ -90,15 +91,24 @@ class ISXPipeline(CIPipe):
         # "bandpass_filter_videos",
         # "motion_correction_videos",
 
-    def preprocess_videos(self):
+    def preprocess_videos(self, name="Preprocess Videos"):
         input_files = self.next_step_input()
-        pp_files = self._isx.make_output_file_paths(input_files, self._output_folder, 'PP')
-        return self.step('Preprocess Videos', lambda files, pp: self.preprocess_result(files, pp), pp_files)
+        pp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PP')
+        return self.step(name, lambda files, pp: self.preprocess_result(files, pp), pp_files)
+
+    def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
+        input_files = self.next_step_input()['videos']
+        bp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'BP')
+        return self.step(name, lambda files, bp: self.spatial_filter_videos(files, bp), bp_files)
 
     def preprocess_result(self, files, pp):
         self._isx.preprocess(files, pp)
         return { 'videos': pp }
-
+    
+    def spatial_filter_videos(self, files, bp):
+        self._isx.spatial_filter(files['videos'], bp, low_cutoff=0.005, high_cutoff=0.5)
+        return { 'videos': bp }
+        
     # def bandpass_filter_videos(input_files, output_dir):
     #     bp_files = isx.make_output_file_paths(input_files, output_dir, 'BP')
     #     isx.spatial_filter(input_files, bp_files, low_cutoff=0.005, high_cutoff=0.5)
