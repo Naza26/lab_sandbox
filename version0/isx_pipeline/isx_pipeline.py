@@ -94,21 +94,36 @@ class ISXPipeline(CIPipe):
     def preprocess_videos(self, name="Preprocess Videos"):
         input_files = self.next_step_input()
         pp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PP')
-        return self.step(name, lambda files, pp: self.preprocess_result(files, pp), pp_files)
+        return self.step(name, lambda files, pp: self._preprocess_result(files, pp), pp_files)
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         input_files = self.next_step_input()['videos']
         bp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'BP')
-        return self.step(name, lambda files, bp: self.spatial_filter_videos(files, bp), bp_files)
+        return self.step(name, lambda files, bp: self._bandpass_filter_result(files, bp), bp_files)
+    
+    def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
+        input_files = self.next_step_input()['videos']
+        step_folder = self._step_folder_path(name)
+        mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
+        mc_files = self._isx.make_output_file_paths(input_files, step_folder, 'MC')
+        translation_files = self._isx.make_output_file_paths(mc_files, step_folder, 'translations', 'csv')
+        crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
+        return self.step(name, lambda files, mean_proj, mc, trans, crop: self._motion_correction_result(files, mean_proj, mc, trans, crop), mean_proj_file, mc_files, translation_files, crop_rect_file)
 
-    def preprocess_result(self, files, pp):
+    def _preprocess_result(self, files, pp):
         self._isx.preprocess(files, pp)
         return { 'videos': pp }
     
-    def spatial_filter_videos(self, files, bp):
+    def _bandpass_filter_result(self, files, bp):
         self._isx.spatial_filter(files['videos'], bp, low_cutoff=0.005, high_cutoff=0.5)
         return { 'videos': bp }
-        
+
+    def _motion_correction_result(self, files, mean_proj, mc, trans, crop):
+        self._isx.project_movie(files['videos'], mean_proj, stat_type='mean')
+        self._isx.motion_correct(files['videos'], mc, max_translation=20, reference_file_name=mean_proj,
+                                  output_translation_files=trans, output_crop_rect_file=crop)
+        return { 'videos': mc, 'translations': trans, 'crop_rect': crop, 'mean_projection': mean_proj }
+
     # def bandpass_filter_videos(input_files, output_dir):
     #     bp_files = isx.make_output_file_paths(input_files, output_dir, 'BP')
     #     isx.spatial_filter(input_files, bp_files, low_cutoff=0.005, high_cutoff=0.5)
