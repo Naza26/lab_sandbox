@@ -110,6 +110,21 @@ class ISXPipeline(CIPipe):
         crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
         return self.step(name, lambda files, mean_proj, mc, trans, crop: self._motion_correction_result(files, mean_proj, mc, trans, crop), mean_proj_file, mc_files, translation_files, crop_rect_file)
 
+    def normalize_dff_videos(self, name="Normalize dF/F Videos"):
+        input_files = self.next_step_input()['videos']
+        dff_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'DFF')
+        return self.step(name, lambda files, dff: self._normalize_dff_result(files, dff), dff_files)
+    
+    def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
+        input_files = self.next_step_input()['videos']
+        ic_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PCA-ICA')
+        return self.step(name, lambda files, ic: self._extract_neurons_pca_ica_result(files, ic), ic_files)
+    
+    def detect_events_in_cells(self, name="Detect Events in Cells"):
+        input_files = self.next_step_input()['cellsets']
+        event_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'ED')
+        return self.step(name, lambda files, events: self._detect_events_in_cells_result(files, events), event_files)
+
     def _preprocess_result(self, files, pp):
         self._isx.preprocess(files, pp)
         return { 'videos': pp }
@@ -123,3 +138,15 @@ class ISXPipeline(CIPipe):
         self._isx.motion_correct(files['videos'], mc, max_translation=20, reference_file_name=mean_proj,
                                   output_translation_files=trans, output_crop_rect_file=crop)
         return { 'videos': mc, 'translations': trans, 'crop_rect': crop, 'mean_projection': mean_proj }
+    
+    def _normalize_dff_result(self, files, dff):
+        self._isx.dff(files['videos'], dff, f0_type='mean')
+        return { 'videos': dff }
+    
+    def _extract_neurons_pca_ica_result(self, files, ic):
+        self._isx.pca_ica(files['videos'], ic, 180, int(1.15 * 180), block_size=1000)
+        return { 'cellsets': ic }
+    
+    def _detect_events_in_cells_result(self, files, events):
+        self._isx.event_detection(files['cellsets'], events, threshold=5)
+        return { 'events': events }

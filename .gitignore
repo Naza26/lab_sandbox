@@ -5,4 +5,4 @@ __pycache__/
 .vscode/
 .idea
 isx_test/videos
-isx_test/output
+isx_test/output*
