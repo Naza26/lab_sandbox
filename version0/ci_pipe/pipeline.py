@@ -1,4 +1,4 @@
-from ci_pipe.step import Step
+from .step import Step
 
 class CIPipe:
     def __init__(self, inputs):
@@ -8,8 +8,8 @@ class CIPipe:
     def output(self):
         return self.next_step_input()
 
-    def step(self, step_name, step_function, *args):
-        new_step = Step(step_name, self.next_step_input(), step_function, args)
+    def step(self, step_name, step_function, *args, **kwargs):
+        new_step = Step(step_name, self.next_step_input(), step_function, args, kwargs)
         self._steps.append(new_step)
         return self
 
