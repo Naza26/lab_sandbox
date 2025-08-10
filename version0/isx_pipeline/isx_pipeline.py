@@ -2,9 +2,6 @@ import os
 from ..ci_pipe.pipeline import CIPipe
 import json
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMP_DIR = os.path.join(BASE_DIR, "temp_output")
-
 class ISXPipeline(CIPipe):
     def __init__(self, isx, output_folder, inputs):
         super().__init__(inputs)
@@ -38,7 +35,7 @@ class ISXPipeline(CIPipe):
     def preprocess_videos(self, name="Preprocess Videos"):
         input_files = self.next_step_input()['videos']
         pp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PP')
-        return self.step(name, lambda files, pp: self._preprocess_result(files, pp), pp_files)
+        return self.step(name, lambda files, pp: self._preprocess_videos_result(files, pp), pp_files)
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         input_files = self.next_step_input()['videos']
