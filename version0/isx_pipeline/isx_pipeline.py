@@ -1,5 +1,5 @@
 import os
-from ..ci_pipe.pipeline import CIPipe
+from ci_pipe.pipeline import CIPipe
 import json
 
 class ISXPipeline(CIPipe):
