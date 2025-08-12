@@ -71,7 +71,8 @@ class PipelineTestCase(unittest.TestCase):
                     'input': [1, 1],
                     'name': 'my_first_step',
                     'output': {'result': 2},
-                    'args': ()
+                    'args': (),
+                    'kwargs': {}
                 }
             ]
         }
