@@ -28,4 +28,4 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           cd version0
-          python -m unittest discover -s . -t . -v
+          python -m unittest discover -s . -p "*_test.py"
