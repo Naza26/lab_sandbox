@@ -9,7 +9,7 @@ class CIPipe:
         return self.next_step_input()
 
     def step(self, step_name, step_function, *args, **kwargs):
-        new_step = Step(step_name, self.next_step_input(), step_function, args, kwargs)
+        new_step = Step(step_name, self.next_step_input(), self.look_up_input, step_function, args, kwargs)
         self._steps.append(new_step)
         return self
 
@@ -17,6 +17,14 @@ class CIPipe:
         if self._steps_are_empty():
             return self._pipeline_inputs
         return self._steps[-1].step_output()
+
+    def look_up_input(self, key):
+        for step in reversed(self._steps):
+            if key in step.step_output():
+                return step.step_output()[key]
+        if key in self._pipeline_inputs:
+            return self._pipeline_inputs[key]
+        raise KeyError(f"Key '{key}' not found in any step output or pipeline input.")
 
     def _steps_are_empty(self):
         return len(self._steps) == 0

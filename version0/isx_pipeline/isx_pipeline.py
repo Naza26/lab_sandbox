@@ -34,7 +34,7 @@ class ISXPipeline(CIPipe):
 
     def preprocess_videos(self, name="Preprocess Videos"):        
         def wrapped_step(input):
-            input_videos = input['videos']
+            input_videos = input('videos')
             pp_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'PP')
             self._isx.preprocess(input_videos, pp_files)
             return { 'videos': pp_files }
@@ -44,7 +44,7 @@ class ISXPipeline(CIPipe):
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
-            input_videos = input['videos']
+            input_videos = input('videos')
             bp_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'BP')
             self._isx.spatial_filter(input_videos, bp_files, low_cutoff=0.005, high_cutoff=0.5)
             return { 'videos': bp_files }
@@ -53,7 +53,7 @@ class ISXPipeline(CIPipe):
     
     def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
         def wrapped_step(input):
-            input_videos = input['videos']
+            input_videos = input('videos')
             step_folder = self._step_folder_path(name)
             mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
             mc_files = self._isx.make_output_file_paths(input_videos, step_folder, 'MC')
@@ -69,7 +69,7 @@ class ISXPipeline(CIPipe):
 
     def normalize_dff_videos(self, name="Normalize dF/F Videos"):
         def wrapped_step(input):
-            input_videos = input['videos']
+            input_videos = input('videos')
             dff_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'DFF')
             self._isx.dff(input_videos, dff_files, f0_type='mean')
             return { 'videos': dff_files }
@@ -78,7 +78,7 @@ class ISXPipeline(CIPipe):
     
     def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
         def wrapped_step(input):
-            input_videos = input['videos']
+            input_videos = input('videos')
             ic_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'PCA-ICA')
             self._isx.pca_ica(input_videos, ic_files, 180, int(1.15 * 180), block_size=1000)
             return { 'cellsets': ic_files }
@@ -87,7 +87,7 @@ class ISXPipeline(CIPipe):
     
     def detect_events_in_cells(self, name="Detect Events in Cells"):
         def wrapped_step(input):
-            input_cellsets = input['cellsets']
+            input_cellsets = input('cellsets')
             event_files = self._isx.make_output_file_paths(input_cellsets, self._step_folder_path(name), 'ED')
             self._isx.event_detection(input_cellsets, event_files, threshold=5)
             return { 'events': event_files }

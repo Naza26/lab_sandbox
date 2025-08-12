@@ -132,19 +132,19 @@ class PipelineTestCase(unittest.TestCase):
 
     # Helper functions for the steps
     def _add_one(self, inputs):
-        return {'numbers': [inputs['numbers'][0] + 1]}
+        return {'numbers': [inputs('numbers')[0] + 1]}
 
-    def _add_another_one(self, input):
-        return {'numbers': [input['numbers'][0] + 1]}
+    def _add_another_one(self, inputs):
+        return {'numbers': [inputs('numbers')[0] + 1]}
 
     def _sum_all(self, inputs):
-        return {'numbers': [sum(inputs['numbers'])]}
+        return {'numbers': [sum(inputs('numbers'))]}
 
     def _scale(self, inputs, factor):
-        return {'numbers': [x * factor for x in inputs['numbers']]}
+        return {'numbers': [x * factor for x in inputs('numbers')]}
 
     def _scale_named(self, inputs, factor=3):
-        return {'numbers': [x * factor for x in inputs['numbers']]}
+        return {'numbers': [x * factor for x in inputs('numbers')]}
 
 
 if __name__ == '__main__':
