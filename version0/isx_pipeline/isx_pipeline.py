@@ -1,6 +1,7 @@
 import os
 from ci_pipe.pipeline import CIPipe
 import json
+import shutil
 
 class ISXPipeline(CIPipe):
     def __init__(self, isx, output_folder, inputs):
@@ -93,7 +94,18 @@ class ISXPipeline(CIPipe):
             return { 'events': event_files }
 
         return self.step(name, lambda input: wrapped_step(input))
-    
+
+    def auto_accept_reject_cells(self, name="Auto Accept-Reject Cells"):
+        def wrapped_step(input):
+            input_cellsets = input('cellsets')
+            copied_cellsets = self._copy_files_to_step_folder(input_cellsets, name)
+            input_events = input('events')
+            filters = [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)]
+            self._isx.auto_accept_reject(copied_cellsets, input_events, filters)
+            return { 'cellsets': copied_cellsets }
+
+        return self.step(name, lambda input: wrapped_step(input))
+
     def _create_output_folder(self, output_folder):
         os.makedirs(output_folder, exist_ok=True)
 
@@ -124,3 +136,12 @@ class ISXPipeline(CIPipe):
             "input": [item for v in step_info["input"].values() for item in v],
             "output": [item for v in step_info["output"].values() for item in v]
         }
+
+    def _copy_files_to_step_folder(self, files, step_name):
+        step_folder = self._step_folder_path(step_name)
+        copied_files = []
+        for file in files:
+            dest = os.path.join(step_folder, os.path.basename(file))
+            shutil.copy2(file, dest)
+            copied_files.append(dest)
+        return copied_files
