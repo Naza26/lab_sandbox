@@ -32,40 +32,68 @@ class ISXPipeline(CIPipe):
         with open(self._trace_file, "r") as f:
             return json.load(f)
 
-    def preprocess_videos(self, name="Preprocess Videos"):
-        input_files = self.next_step_input()['videos']
-        pp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PP')
-        return self.step(name, lambda files, pp: self._preprocess_videos_result(files, pp), pp_files)
+    def preprocess_videos(self, name="Preprocess Videos"):        
+        def wrapped_step(input):
+            input_videos = input['videos']
+            pp_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'PP')
+            self._isx.preprocess(input_videos, pp_files)
+            return { 'videos': pp_files }
+
+        return self.step(name, lambda input: wrapped_step(input))
+
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
-        input_files = self.next_step_input()['videos']
-        bp_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'BP')
-        return self.step(name, lambda files, bp: self._bandpass_filter_result(files, bp), bp_files)
+        def wrapped_step(input):
+            input_videos = input['videos']
+            bp_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'BP')
+            self._isx.spatial_filter(input_videos, bp_files, low_cutoff=0.005, high_cutoff=0.5)
+            return { 'videos': bp_files }
+
+        return self.step(name, lambda input: wrapped_step(input))
     
     def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
-        input_files = self.next_step_input()['videos']
-        step_folder = self._step_folder_path(name)
-        mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
-        mc_files = self._isx.make_output_file_paths(input_files, step_folder, 'MC')
-        translation_files = self._isx.make_output_file_paths(mc_files, step_folder, 'translations', 'csv')
-        crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
-        return self.step(name, lambda files, mean_proj, mc, trans, crop: self._motion_correction_result(files, mean_proj, mc, trans, crop), mean_proj_file, mc_files, translation_files, crop_rect_file)
+        def wrapped_step(input):
+            input_videos = input['videos']
+            step_folder = self._step_folder_path(name)
+            mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
+            mc_files = self._isx.make_output_file_paths(input_videos, step_folder, 'MC')
+            translation_files = self._isx.make_output_file_paths(mc_files, step_folder, 'translations', 'csv')
+            crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
+            self._isx.project_movie(input_videos, mean_proj_file, stat_type='mean')
+            self._isx.motion_correct(input_videos, mc_files, max_translation=20, reference_file_name=mean_proj_file,
+                                      output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
+            
+            return { 'videos': mc_files, 'translations': translation_files, 'crop_rect': [crop_rect_file], 'mean_projection': [mean_proj_file] }
+
+        return self.step(name, lambda input: wrapped_step(input))
 
     def normalize_dff_videos(self, name="Normalize dF/F Videos"):
-        input_files = self.next_step_input()['videos']
-        dff_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'DFF')
-        return self.step(name, lambda files, dff: self._normalize_dff_result(files, dff), dff_files)
+        def wrapped_step(input):
+            input_videos = input['videos']
+            dff_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'DFF')
+            self._isx.dff(input_videos, dff_files, f0_type='mean')
+            return { 'videos': dff_files }
+
+        return self.step(name, lambda input: wrapped_step(input))
     
     def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
-        input_files = self.next_step_input()['videos']
-        ic_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'PCA-ICA')
-        return self.step(name, lambda files, ic: self._extract_neurons_pca_ica_result(files, ic), ic_files)
+        def wrapped_step(input):
+            input_videos = input['videos']
+            ic_files = self._isx.make_output_file_paths(input_videos, self._step_folder_path(name), 'PCA-ICA')
+            self._isx.pca_ica(input_videos, ic_files, 180, int(1.15 * 180), block_size=1000)
+            return { 'cellsets': ic_files }
+
+        return self.step(name, lambda input: wrapped_step(input))
     
     def detect_events_in_cells(self, name="Detect Events in Cells"):
-        input_files = self.next_step_input()['cellsets']
-        event_files = self._isx.make_output_file_paths(input_files, self._step_folder_path(name), 'ED')
-        return self.step(name, lambda files, events: self._detect_events_in_cells_result(files, events), event_files)
+        def wrapped_step(input):
+            input_cellsets = input['cellsets']
+            event_files = self._isx.make_output_file_paths(input_cellsets, self._step_folder_path(name), 'ED')
+            self._isx.event_detection(input_cellsets, event_files, threshold=5)
+            return { 'events': event_files }
 
+        return self.step(name, lambda input: wrapped_step(input))
+    
     def _create_output_folder(self, output_folder):
         os.makedirs(output_folder, exist_ok=True)
 
@@ -96,29 +124,3 @@ class ISXPipeline(CIPipe):
             "input": [item for v in step_info["input"].values() for item in v],
             "output": [item for v in step_info["output"].values() for item in v]
         }
-
-    def _preprocess_videos_result(self, files, pp):
-        self._isx.preprocess(files['videos'], pp)
-        return { 'videos': pp }
-    
-    def _bandpass_filter_result(self, files, bp):
-        self._isx.spatial_filter(files['videos'], bp, low_cutoff=0.005, high_cutoff=0.5)
-        return { 'videos': bp }
-
-    def _motion_correction_result(self, files, mean_proj, mc, trans, crop):
-        self._isx.project_movie(files['videos'], mean_proj, stat_type='mean')
-        self._isx.motion_correct(files['videos'], mc, max_translation=20, reference_file_name=mean_proj,
-                                  output_translation_files=trans, output_crop_rect_file=crop)
-        return { 'videos': mc, 'translations': trans, 'crop_rect': [crop], 'mean_projection': [mean_proj] }
-
-    def _normalize_dff_result(self, files, dff):
-        self._isx.dff(files['videos'], dff, f0_type='mean')
-        return { 'videos': dff }
-    
-    def _extract_neurons_pca_ica_result(self, files, ic):
-        self._isx.pca_ica(files['videos'], ic, 180, int(1.15 * 180), block_size=1000)
-        return { 'cellsets': ic }
-    
-    def _detect_events_in_cells_result(self, files, events):
-        self._isx.event_detection(files['cellsets'], events, threshold=5)
-        return { 'events': events }

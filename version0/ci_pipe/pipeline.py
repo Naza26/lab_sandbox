@@ -14,7 +14,6 @@ class CIPipe:
         return self
 
     def next_step_input(self):
-        # Recheck
         if self._steps_are_empty():
             return self._pipeline_inputs
         return self._steps[-1].step_output()
