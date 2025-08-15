@@ -3,7 +3,7 @@ services:
     build: .
     volumes:
       - isx_python_api:/tmp/inscopix
-      - ./Inscopix_Data_Processing_1.9.6.sh:/opt/installer.sh:ro
+      - ./isx_installer.sh:/opt/installer.sh:ro # rename locally Inscopix Data Processing 1.9.6.sh
       - ./output:/output
       - ./:/app:rw                                  # your repo root (optional)
       - ./ci_pipeline:/work/ci_pipeline:rw
@@ -12,6 +12,7 @@ services:
       - ISX_INSTALLER_PATH=/opt/installer.sh
       - EXPECTED_OUTPUT_FILE=/output/done.marker
     working_dir: /app
+    stdin_open: true
     tty: true
     restart: "no"
 
