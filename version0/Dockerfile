@@ -33,7 +33,6 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY entrypoint.sh /app/entrypoint.sh
-COPY bootstrap.py /app/bootstrap.py
 
 RUN chmod +x /app/entrypoint.sh
 
