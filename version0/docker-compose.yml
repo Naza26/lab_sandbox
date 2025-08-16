@@ -2,18 +2,19 @@ services:
   isx_installer:
     build: .
     volumes:
-      - isx_python_api:/tmp/inscopix
-      - ./isx_installer.sh:/opt/installer.sh:ro # rename locally Inscopix Data Processing 1.9.6.sh
+      - isx_python_api:/tmp/inscopix                # persistent ISX install
+      - ./isx_installer.sh:/opt/installer.sh:ro     # OR mount a folder & set ISX_INSTALLER_PATH
+      - ./:/app:rw                                  # your repo (installer extracts here)
       - ./output:/output
-      - ./:/app:rw                                  # your repo root (optional)
-      - ./ci_pipeline:/work/ci_pipeline:rw
     environment:
-      - LOCAL_EDITABLE_DIR=/work/ci_pipeline
-      - ISX_INSTALLER_PATH=/opt/installer.sh
-      - EXPECTED_OUTPUT_FILE=/output/done.marker
-    working_dir: /app
-    stdin_open: true
+      INSTALL_BASE: /tmp/inscopix
+      ISX_SEARCH_ROOTS: "/tmp/inscopix:/app"
+      ISX_AUTO_ACCEPT: "0"         # set "1" to auto-accept license prompts
+      # ISX_INSTALLER_ARGS: "--target /tmp/inscopix"   # if the installer supports it
+      # LOCAL_EDITABLE_DIR: /app/your-lib             # if you want -e install
+    stdin_open: true   # so you can type "y" interactively
     tty: true
+    working_dir: /app
     restart: "no"
 
 volumes:
