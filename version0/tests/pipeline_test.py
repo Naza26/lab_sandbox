@@ -62,15 +62,16 @@ class PipelineTestCase(unittest.TestCase):
         info = pipeline.info()
 
         expected_info = {
+            'defaults': {},
             'inputs': {'numbers': [1, 1]},
             'output': {'numbers': [2]},
             'steps': [
                 {
-                    'input': {'numbers': [1, 1]},
-                    'name': 'my_first_step',
-                    'output': {'numbers': [2]},
                     'args': (),
-                    'kwargs': {}
+                    'input': {'numbers': [1, 1]},
+                    'kwargs': {},
+                    'name': 'my_first_step',
+                    'output': {'numbers': [2]}
                 }
             ]
         }
@@ -84,11 +85,12 @@ class PipelineTestCase(unittest.TestCase):
 
         # When
         info = (CIPipe(pipeline_raw_input)
-                    .step("params_test", self._scale, 5)
+                .step("params_test", self._scale, 5)
                 .info())
 
         # Then
         expected_info = {
+            'defaults': {},
             'inputs': {'numbers': [2]},
             'output': {'numbers': [10]},
             'steps': [
@@ -103,18 +105,18 @@ class PipelineTestCase(unittest.TestCase):
         }
         self.assertEqual(info, expected_info)
 
-
     def test_07_can_forward_named_args_to_step(self):
         # Given
         pipeline_raw_input = {'numbers': [2]}
 
         # When
         info = (CIPipe(pipeline_raw_input)
-                    .step("scale by factor", self._scale_named, factor=5)
-                    .info())
+                .step("scale by factor", self._scale_named, factor=5)
+                .info())
 
         # Then
         expected_info = {
+            'defaults': {},
             'inputs': {'numbers': [2]},
             'output': {'numbers': [10]},
             'steps': [
@@ -129,6 +131,59 @@ class PipelineTestCase(unittest.TestCase):
         }
         self.assertEqual(info, expected_info)
 
+    def test_08_can_define_default_named_args_for_steps(self):
+        # Given
+        pipeline_raw_input = {'numbers': [2]}
+
+        # When
+        info = (CIPipe(pipeline_raw_input)
+                .set_defaults(factor=5)
+                .step("scale by default factor", self._scale_named)
+                .info())
+
+        # Then
+        expected_info = {
+            'defaults': {'factor': 5},
+            'inputs': {'numbers': [2]},
+            'output': {'numbers': [10]},
+            'steps': [
+                {
+                    'input': {'numbers': [2]},
+                    'name': 'scale by default factor',
+                    'output': {'numbers': [10]},
+                    'args': (),
+                    'kwargs': {'factor': 5}
+                }
+            ]
+        }
+        self.assertEqual(info, expected_info)
+
+    def test_09_step_kwarg_overrides_default(self):
+        # Given
+        pipeline_raw_input = {'numbers': [2]}
+
+        # When
+        info = (CIPipe(pipeline_raw_input)
+                .set_defaults(factor=5)
+                .step("scale by default factor", self._scale_named, factor=10)
+                .info())
+
+        # Then
+        expected_info = {
+            'defaults': {'factor': 5},
+            'inputs': {'numbers': [2]},
+            'output': {'numbers': [20]},
+            'steps': [
+                {
+                    'input': {'numbers': [2]},
+                    'name': 'scale by default factor',
+                    'output': {'numbers': [20]},
+                    'args': (),
+                    'kwargs': {'factor': 10}
+                }
+            ]
+        }
+        self.assertEqual(info, expected_info)
 
     # Helper functions for the steps
     def _add_one(self, inputs):
