@@ -1,22 +1,32 @@
+import importlib
 import os
-from ci_pipe.pipeline import CIPipe
 import json
 import shutil
+from typing import ClassVar, Any
+
+from ci_pipe.pipeline import CIPipe
+
 
 class ISXPipeline(CIPipe):
-    def __init__(self, isx, output_folder, inputs):
+    # ISX as a class variable
+    # Import is cached in sys.modules (https://docs.python.org/3/reference/import.html?utm_source=chatgpt.com)
+    # Since this is an ISX pipe, I believe it's nice to create an object that gets created with whatever needs to for completeness
+    # I would only inject the package into the class if we were to test it and then we would need to mock an obj like isx=FakeISX()
+    isx_package: ClassVar[Any] = importlib.import_module("isx")
+
+    def __init__(self, output_folder, inputs):
         super().__init__(inputs)
-        self._isx = isx
+        self._isx = self.__class__.isx_package
         self._steps = []
         self._output_folder, self._trace_file = self._create_output_folder(output_folder)
 
     @classmethod
-    def new(cls, isx, input_folder, output_folder="output"):
+    def new(cls, input_folder, output_folder="output"):
         inputs = cls._scan_files(input_folder)
-        return cls(isx, output_folder, inputs)
+        return cls(output_folder, inputs)
     
     @classmethod
-    def _scan_files(self , input_folder: str):
+    def _scan_files(cls, input_folder: str):
         files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith('.isxd')]
         return { "videos": files }
     
