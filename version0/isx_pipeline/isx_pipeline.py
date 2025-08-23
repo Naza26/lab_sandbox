@@ -23,8 +23,18 @@ class ISXPipeline(CIPipe):
             inputs=self._pipeline_inputs,
             branch_name=branch_name
         )
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
 
+        if self.branch_name in trace:
+            base_branch_trace = trace[self.branch_name]
+            trace[branch_name] = dict(base_branch_trace)
+            with open(self._trace_file, "w") as f:
+                json.dump(trace, f, indent=4)
+                
+        new_pipeline._steps = list(self._steps)
         return new_pipeline
+
 
 
 
@@ -130,27 +140,25 @@ class ISXPipeline(CIPipe):
             trace = json.load(f)
         
         branch_trace = trace.get(self.branch_name, {})
-        step_index = len(branch_trace)  # usar trace en vez de self._steps
+        step_index = len(branch_trace) + 1
 
-        step_folder_name = f"{self.branch_name} - step {step_index + 1} - {step_name}"
+        step_folder_name = f"{self.branch_name} - step {step_index} - {step_name}"
         return os.path.join(self._output_folder, step_folder_name)
+
 
     def _update_trace(self):
         step_info = self._steps[-1].info()
         with open(self._trace_file, "r") as f:
             trace = json.load(f)
-
-        # Si la branch no existe, la creamos
         if self.branch_name not in trace:
             trace[self.branch_name] = {}
-
         self._add_step_to_trace(step_info, trace[self.branch_name])
 
         with open(self._trace_file, "w") as f:
             json.dump(trace, f, indent=4)
 
     def _add_step_to_trace(self, step_info, branch_trace):
-        step_number = str(len(branch_trace) + 1)  # contamos pasos en la branch actual
+        step_number = str(len(branch_trace) + 1)
         branch_trace[step_number] = {
             "algorithm": step_info["name"],
             "input": [item for v in step_info["input"].values() for item in v],
