@@ -16,6 +16,18 @@ class ISXPipeline(CIPipe):
         inputs = cls._scan_files(input_folder)
         return cls(isx, output_folder, inputs, branch_name)
     
+    def branch(self, branch_name):
+        new_pipeline = ISXPipeline(
+            isx=self._isx,
+            output_folder=self._output_folder,
+            inputs=self._pipeline_inputs,
+            branch_name=branch_name
+        )
+
+        return new_pipeline
+
+
+
     @classmethod
     def _scan_files(self , input_folder: str):
         files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith('.isxd')]
@@ -114,8 +126,13 @@ class ISXPipeline(CIPipe):
         return output_folder, trace_path
 
     def _step_folder_path(self, step_name):
-        step_index = len(self._steps)
-        step_folder_name = f"step {step_index + 1} - {step_name}"
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
+        
+        branch_trace = trace.get(self.branch_name, {})
+        step_index = len(branch_trace)  # usar trace en vez de self._steps
+
+        step_folder_name = f"{self.branch_name} - step {step_index + 1} - {step_name}"
         return os.path.join(self._output_folder, step_folder_name)
 
     def _update_trace(self):
