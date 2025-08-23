@@ -4,16 +4,17 @@ import json
 import shutil
 
 class ISXPipeline(CIPipe):
-    def __init__(self, isx, output_folder, inputs):
+    def __init__(self, isx, output_folder, inputs, branch_name="branch 1"):
         super().__init__(inputs)
         self._isx = isx
         self._steps = []
+        self.branch_name = branch_name
         self._output_folder, self._trace_file = self._create_output_folder(output_folder)
 
     @classmethod
-    def new(cls, isx, input_folder, output_folder="output"):
+    def new(cls, isx, input_folder, output_folder="output", branch_name="branch 1"):
         inputs = cls._scan_files(input_folder)
-        return cls(isx, output_folder, inputs)
+        return cls(isx, output_folder, inputs, branch_name)
     
     @classmethod
     def _scan_files(self , input_folder: str):
@@ -31,7 +32,12 @@ class ISXPipeline(CIPipe):
 
     def trace(self):
         with open(self._trace_file, "r") as f:
-            return json.load(f)
+            trace = json.load(f)
+        branch_trace = trace.get(self.branch_name, {})
+        return {
+            "branch_name": self.branch_name,
+            "steps": branch_trace
+        }
 
     def preprocess_videos(self, name="Preprocess Videos"):        
         def wrapped_step(input):
@@ -117,13 +123,18 @@ class ISXPipeline(CIPipe):
         with open(self._trace_file, "r") as f:
             trace = json.load(f)
 
-        self._add_step_to_trace(step_info, trace)
+        # Si la branch no existe, la creamos
+        if self.branch_name not in trace:
+            trace[self.branch_name] = {}
+
+        self._add_step_to_trace(step_info, trace[self.branch_name])
+
         with open(self._trace_file, "w") as f:
             json.dump(trace, f, indent=4)
 
-    def _add_step_to_trace(self, step_info, trace):
-        step_number = str(len(self._steps))
-        trace[step_number] = {
+    def _add_step_to_trace(self, step_info, branch_trace):
+        step_number = str(len(branch_trace) + 1)  # contamos pasos en la branch actual
+        branch_trace[step_number] = {
             "algorithm": step_info["name"],
             "input": [item for v in step_info["input"].values() for item in v],
             "output": [item for v in step_info["output"].values() for item in v]
