@@ -1,4 +1,4 @@
-from ci_pipe.step import Step
+from .step import Step
 
 class CIPipe:
     def __init__(self, inputs):

@@ -1,5 +1,5 @@
 import os
-from ci_pipe.pipeline import CIPipe
+from ..ci_pipe.pipeline import CIPipe
 import json
 import shutil
 
@@ -36,7 +36,7 @@ class ISXPipeline(CIPipe):
     def preprocess_videos(self, name="Preprocess Videos"):        
         def wrapped_step(input):
             input_videos, pp_files = self._input_and_output_files(input, 'videos', name, 'PP')
-            self._isx.preprocess(input_videos, pp_files)
+            #self._isx.preprocess(input_videos, pp_files)
             return { 'videos': pp_files }
 
         return self.step(name, lambda input: wrapped_step(input))
