@@ -31,11 +31,9 @@ class ISXPipeline(CIPipe):
             trace[branch_name] = dict(base_branch_trace)
             with open(self._trace_file, "w") as f:
                 json.dump(trace, f, indent=4)
-                
+
         new_pipeline._steps = list(self._steps)
         return new_pipeline
-
-
 
 
     @classmethod
@@ -64,7 +62,7 @@ class ISXPipeline(CIPipe):
     def preprocess_videos(self, name="Preprocess Videos"):        
         def wrapped_step(input):
             input_videos, pp_files = self._input_and_output_files(input, 'videos', name, 'PP')
-            #self._isx.preprocess(input_videos, pp_files)
+            self._isx.preprocess(input_videos, pp_files)
             return { 'videos': pp_files }
 
         return self.step(name, lambda input: wrapped_step(input))
