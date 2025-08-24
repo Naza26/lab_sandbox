@@ -35,55 +35,73 @@ class ISXPipeline(CIPipe):
 
     def preprocess_videos(self, name="Preprocess Videos"):        
         def wrapped_step(input):
-            input_videos, pp_files = self._input_and_output_files(input, 'videos', name, 'PP')
-            self._isx.preprocess(input_videos, pp_files)
-            return { 'videos': pp_files }
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
+            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            return { 'videos': [out_file for _, out_file in input_output_pairs] }
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
-            input_videos, bp_files = self._input_and_output_files(input, 'videos', name, 'BP')
-            self._isx.spatial_filter(input_videos, bp_files, low_cutoff=0.005, high_cutoff=0.5)
-            return { 'videos': bp_files }
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
+            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005, high_cutoff=0.5))
+            return { 'videos': [out_file for _, out_file in input_output_pairs] }
 
         return self.step(name, lambda input: wrapped_step(input))
     
     def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
         def wrapped_step(input):
-            input_videos, mc_files = self._input_and_output_files(input, 'videos', name, 'MC')
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'MC')
             step_folder = self._step_folder_path(name)
-            translation_files = self._isx.make_output_file_paths(mc_files, step_folder, 'translations', 'csv')
-            mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
-            crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
-            self._isx.project_movie(input_videos, mean_proj_file, stat_type='mean')
-            self._isx.motion_correct(input_videos, mc_files, max_translation=20, reference_file_name=mean_proj_file,
-                                      output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
-            return { 'videos': mc_files, 'translations': translation_files, 'crop_rect': [crop_rect_file], 'mean_projection': [mean_proj_file] }
+            mc_files = []
+            translation_files = []
+            mean_proj_files = []
+            crop_rect_files = []
+            for in_file, out_file in input_output_pairs:
+                video_name = os.path.splitext(os.path.basename(in_file))[0]
+                mean_proj_file = os.path.join(step_folder, f'{video_name}-{series_name}-mean_image.isxd')
+                crop_rect_file = os.path.join(step_folder, f'{video_name}-{series_name}-crop_rect.csv')
+                translation_file = self._isx.make_output_file_paths([out_file], step_folder, 'translations', 'csv')[0]
+                self._isx.project_movie([in_file], mean_proj_file, stat_type='mean')
+                self._isx.motion_correct([in_file], [out_file], max_translation=20, reference_file_name=mean_proj_file,
+                                        output_translation_files=[translation_file], output_crop_rect_file=crop_rect_file)
+                mc_files.append(out_file)
+                translation_files.append(translation_file)
+                mean_proj_files.append(mean_proj_file)
+                crop_rect_files.append(crop_rect_file)
+            return { 'videos': mc_files, 'translations': translation_files, 'crop_rect': crop_rect_files, 'mean_projection': mean_proj_files }
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def normalize_dff_videos(self, name="Normalize dF/F Videos"):
         def wrapped_step(input):
-            input_videos, dff_files = self._input_and_output_files(input, 'videos', name, 'DFF')
-            self._isx.dff(input_videos, dff_files, f0_type='mean')
-            return { 'videos': dff_files }
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'DFF')
+            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.dff(i, o, f0_type='mean'))
+            return { 'videos': [out_file for _, out_file in input_output_pairs] }
 
         return self.step(name, lambda input: wrapped_step(input))
     
     def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
         def wrapped_step(input):
-            input_videos, ic_files = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
-            self._isx.pca_ica(input_videos, ic_files, 180, int(1.15 * 180), block_size=1000)
-            return { 'cellsets': ic_files }
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
+            cellsets = []
+            def pca_ica_fn(i, o):
+                self._isx.pca_ica(i, o, 180, int(1.15 * 180), block_size=1000)
+                cellsets.append(o[0])
+            self._process_input_output_pairs(input_output_pairs, pca_ica_fn)
+            return { 'cellsets': cellsets }
 
         return self.step(name, lambda input: wrapped_step(input))
     
     def detect_events_in_cells(self, name="Detect Events in Cells"):
         def wrapped_step(input):
-            input_cellsets, event_files = self._input_and_output_files(input, 'cellsets', name, 'ED')
-            self._isx.event_detection(input_cellsets, event_files, threshold=5)
-            return { 'events': event_files }
+            input_output_pairs = self._input_and_output_files(input, 'cellsets', name, 'ED')
+            events = []
+            def event_fn(i, o):
+                self._isx.event_detection(i, o, threshold=5)
+                events.append(o[0])
+            self._process_input_output_pairs(input_output_pairs, event_fn)
+            return { 'events': events }
 
         return self.step(name, lambda input: wrapped_step(input))
 
@@ -93,7 +111,10 @@ class ISXPipeline(CIPipe):
             copied_cellsets = self._copy_files_to_step_folder(input_cellsets, name)
             input_events = input('events')
             filters = [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)]
-            self._isx.auto_accept_reject(copied_cellsets, input_events, filters)
+            matches = self._match_events_to_cellsets(copied_cellsets, input_events)
+            for cellset, event_file in matches.items():
+                print(f"[auto_accept_reject] MATCH: {os.path.basename(cellset)} -> {os.path.basename(event_file)}")
+                self._isx.auto_accept_reject([cellset], [event_file], filters)
             return { 'cellsets': copied_cellsets }
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -132,8 +153,44 @@ class ISXPipeline(CIPipe):
     def _input_and_output_files(self, input, input_key, step_name, output_suffix):
         input_files = input(input_key)
         step_folder = self._step_folder_path(step_name)
-        output_files = self._isx.make_output_file_paths(input_files, step_folder, output_suffix)
-        return input_files, output_files
+        input_output_pairs = []
+        for in_file in input_files:
+            out_file = self._isx.make_output_file_paths([in_file], step_folder, output_suffix)[0]
+            input_output_pairs.append((in_file, out_file))
+        return input_output_pairs
+
+    def _process_input_output_pairs(self, input_output_pairs, fn):
+        for in_file, out_file in input_output_pairs:
+            fn([in_file], [out_file])
+
+    def _basename_no_ext(self, path):
+        return os.path.splitext(os.path.basename(path))[0]
+
+    def _match_events_to_cellsets(self, cellsets, events):
+        # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
+        # Exact prefix match: event basename must be f"{cellset_basename}-ED"
+        event_by_base = { self._basename_no_ext(ev): ev for ev in events }
+        matches = {}
+        unmatched_cellsets = []
+        for cs in cellsets:
+            cs_base = self._basename_no_ext(cs)
+            expected_event_base = f"{cs_base}-ED"
+            ev = event_by_base.get(expected_event_base)
+            if ev:
+                matches[cs] = ev
+            else:
+                unmatched_cellsets.append(cs)
+        used_events = set(matches.values())
+        unmatched_events = [ev for ev in events if ev not in used_events]
+        if unmatched_cellsets:
+            print("[auto_accept_reject] UNMATCHED CELLSETS:")
+            for cs in unmatched_cellsets:
+                print(f"  - {os.path.basename(cs)}")
+        if unmatched_events:
+            print("[auto_accept_reject] UNMATCHED EVENTS:")
+            for ev in unmatched_events:
+                print(f"  - {os.path.basename(ev)}")
+        return matches
 
     def _copy_files_to_step_folder(self, files, step_name):
         step_folder = self._step_folder_path(step_name)
