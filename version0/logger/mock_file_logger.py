@@ -1,3 +1,5 @@
+from collections import deque
+
 from logger.mock_log_result import MockLogResult
 
 
@@ -8,15 +10,16 @@ class MockFileLogger:
         return cls(path)
 
     def __init__(self, filepath):
-        self._logs = {}
+        self._mocked_logs = deque()
         self._filepath = filepath
 
-    def is_empty(self):
-        return self.all_logs_as_json() == {}
-
     def add_log(self, data):
-        self._logs.update(data)
+        self._mocked_logs.extend([data])
+
+    def is_empty(self):
+        return len(self._mocked_logs) == 0
 
     def all_logs_as_json(self):
-        result = MockLogResult(self._filepath) # FIXME: Replace with mock results
+        log_data = self._mocked_logs.popleft()
+        result = MockLogResult(log_data)
         return result.as_json()
