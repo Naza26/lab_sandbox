@@ -1,6 +1,7 @@
 class MockLogResult:
-    def __init__(self, filepath):
-        self._filepath = filepath
+    def __init__(self, data):
+        self._filepath = "mocked_filepath"
+        self._data = data
 
     def as_json(self):
-        return {}
+        return self._data
