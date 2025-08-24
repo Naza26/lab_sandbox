@@ -1,6 +1,5 @@
 import importlib
 import os
-import json
 import shutil
 from typing import ClassVar, Any
 
@@ -8,28 +7,25 @@ from ci_pipe.pipeline import CIPipe
 
 
 class ISXPipeline(CIPipe):
-    # ISX as a class variable
-    # Import is cached in sys.modules (https://docs.python.org/3/reference/import.html?utm_source=chatgpt.com)
-    # Since this is an ISX pipe, I believe it's nice to create an object that gets created with whatever needs to for completeness
-    # I would only inject the package into the class if we were to test it and then we would need to mock an obj like isx=FakeISX()
     isx_package: ClassVar[Any] = importlib.import_module("isx")
 
-    def __init__(self, output_folder, inputs):
+    def __init__(self, output_folder, inputs, logger):
         super().__init__(inputs)
         self._isx = self.__class__.isx_package
         self._steps = []
+        self._logger = logger
         self._output_folder, self._trace_file = self._create_output_folder(output_folder)
 
     @classmethod
-    def new(cls, input_folder, output_folder="output"):
+    def new(cls, input_folder, output_folder, logger):
         inputs = cls._scan_files(input_folder)
-        return cls(output_folder, inputs)
-    
+        return cls(output_folder, inputs, logger)
+
     @classmethod
     def _scan_files(cls, input_folder: str):
         files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith('.isxd')]
-        return { "videos": files }
-    
+        return {"videos": files}
+
     def step(self, step_name, step_function, *args):
         step_folder_path = self._step_folder_path(step_name)
         os.makedirs(step_folder_path, exist_ok=True)
@@ -40,14 +36,13 @@ class ISXPipeline(CIPipe):
         return result
 
     def trace(self):
-        with open(self._trace_file, "r") as f:
-            return json.load(f)
+        self._logger.read_json_from_file()
 
-    def preprocess_videos(self, name="Preprocess Videos"):        
+    def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
             input_videos, pp_files = self._input_and_output_files(input, 'videos', name, 'PP')
             self._isx.preprocess(input_videos, pp_files)
-            return { 'videos': pp_files }
+            return {'videos': pp_files}
 
         return self.step(name, lambda input: wrapped_step(input))
 
@@ -55,10 +50,10 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_videos, bp_files = self._input_and_output_files(input, 'videos', name, 'BP')
             self._isx.spatial_filter(input_videos, bp_files, low_cutoff=0.005, high_cutoff=0.5)
-            return { 'videos': bp_files }
+            return {'videos': bp_files}
 
         return self.step(name, lambda input: wrapped_step(input))
-    
+
     def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
         def wrapped_step(input):
             input_videos, mc_files = self._input_and_output_files(input, 'videos', name, 'MC')
@@ -68,8 +63,9 @@ class ISXPipeline(CIPipe):
             crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
             self._isx.project_movie(input_videos, mean_proj_file, stat_type='mean')
             self._isx.motion_correct(input_videos, mc_files, max_translation=20, reference_file_name=mean_proj_file,
-                                      output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
-            return { 'videos': mc_files, 'translations': translation_files, 'crop_rect': [crop_rect_file], 'mean_projection': [mean_proj_file] }
+                                     output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
+            return {'videos': mc_files, 'translations': translation_files, 'crop_rect': [crop_rect_file],
+                    'mean_projection': [mean_proj_file]}
 
         return self.step(name, lambda input: wrapped_step(input))
 
@@ -77,23 +73,23 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_videos, dff_files = self._input_and_output_files(input, 'videos', name, 'DFF')
             self._isx.dff(input_videos, dff_files, f0_type='mean')
-            return { 'videos': dff_files }
+            return {'videos': dff_files}
 
         return self.step(name, lambda input: wrapped_step(input))
-    
+
     def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
         def wrapped_step(input):
             input_videos, ic_files = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
             self._isx.pca_ica(input_videos, ic_files, 180, int(1.15 * 180), block_size=1000)
-            return { 'cellsets': ic_files }
+            return {'cellsets': ic_files}
 
         return self.step(name, lambda input: wrapped_step(input))
-    
+
     def detect_events_in_cells(self, name="Detect Events in Cells"):
         def wrapped_step(input):
             input_cellsets, event_files = self._input_and_output_files(input, 'cellsets', name, 'ED')
             self._isx.event_detection(input_cellsets, event_files, threshold=5)
-            return { 'events': event_files }
+            return {'events': event_files}
 
         return self.step(name, lambda input: wrapped_step(input))
 
@@ -104,7 +100,7 @@ class ISXPipeline(CIPipe):
             input_events = input('events')
             filters = [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)]
             self._isx.auto_accept_reject(copied_cellsets, input_events, filters)
-            return { 'cellsets': copied_cellsets }
+            return {'cellsets': copied_cellsets}
 
         return self.step(name, lambda input: wrapped_step(input))
 
@@ -124,12 +120,9 @@ class ISXPipeline(CIPipe):
 
     def _update_trace(self):
         step_info = self._steps[-1].info()
-        with open(self._trace_file, "r") as f:
-            trace = json.load(f)
-
+        trace = self._logger.read_json_from_file()
         self._add_step_to_trace(step_info, trace)
-        with open(self._trace_file, "w") as f:
-            json.dump(trace, f, indent=4)
+        self._logger.write_json_to_file(trace)
 
     def _add_step_to_trace(self, step_info, trace):
         step_number = str(len(self._steps))
