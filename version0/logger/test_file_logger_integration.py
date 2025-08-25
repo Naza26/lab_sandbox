@@ -6,7 +6,7 @@ from logger.file_logger import FileLogger
 
 class FileLoggerPipelineIntegrationTests(unittest.TestCase):
     def test_pipeline_keeps_trace_with_file_logger(self):
-        logger = FileLogger.new_for("test_01", "logs")
+        logger = FileLogger.new_for("test_01.json", "logs")
         isx_pipeline = ISXPipeline.new("videos", "output", logger)
         print(isx_pipeline.trace())
         self._execute_many_steps(isx_pipeline)

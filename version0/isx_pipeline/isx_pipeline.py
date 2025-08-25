@@ -1,9 +1,9 @@
 import importlib
-import os
 import shutil
 from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
+from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path
 
 
 class ISXPipeline(CIPipe):
@@ -14,7 +14,7 @@ class ISXPipeline(CIPipe):
         self._isx = self.__class__.isx_package
         self._steps = []
         self._logger = logger
-        self._output_folder, self._trace_file = self._create_output_folder(output_folder)
+        self._output_folder = self._logger.directory()
 
     @classmethod
     def new(cls, input_folder, output_folder, logger):
@@ -23,12 +23,13 @@ class ISXPipeline(CIPipe):
 
     @classmethod
     def _scan_files(cls, input_folder: str):
-        files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith('.isxd')]
+        files = [
+            build_filesystem_path_from(input_folder, f) for f in list_directory_contents(input_folder) if f.endswith('.isxd')]
         return {"videos": files}
 
     def step(self, step_name, step_function, *args):
         step_folder_path = self._step_folder_path(step_name)
-        os.makedirs(step_folder_path, exist_ok=True)
+        create_directory_from(step_folder_path)
 
         result = super().step(step_name, step_function, *args)
         self._update_trace()
@@ -59,8 +60,8 @@ class ISXPipeline(CIPipe):
             input_videos, mc_files = self._input_and_output_files(input, 'videos', name, 'MC')
             step_folder = self._step_folder_path(name)
             translation_files = self._isx.make_output_file_paths(mc_files, step_folder, 'translations', 'csv')
-            mean_proj_file = os.path.join(step_folder, f'{series_name}-mean_image.isxd')
-            crop_rect_file = os.path.join(step_folder, f'{series_name}-crop_rect.csv')
+            mean_proj_file = build_filesystem_path_from(step_folder, f'{series_name}-mean_image.isxd')
+            crop_rect_file = build_filesystem_path_from(step_folder, f'{series_name}-crop_rect.csv')
             self._isx.project_movie(input_videos, mean_proj_file, stat_type='mean')
             self._isx.motion_correct(input_videos, mc_files, max_translation=20, reference_file_name=mean_proj_file,
                                      output_translation_files=translation_files, output_crop_rect_file=crop_rect_file)
@@ -104,19 +105,10 @@ class ISXPipeline(CIPipe):
 
         return self.step(name, lambda input: wrapped_step(input))
 
-    def _create_output_folder(self, output_folder):
-        os.makedirs(output_folder, exist_ok=True)
-
-        trace_path = os.path.join(output_folder, "trace.json")
-        if not os.path.exists(trace_path):
-            with open(trace_path, 'w') as f:
-                f.write("{}")
-        return output_folder, trace_path
-
     def _step_folder_path(self, step_name):
         step_index = len(self._steps)
         step_folder_name = f"step {step_index + 1} - {step_name}"
-        return os.path.join(self._output_folder, step_folder_name)
+        return build_filesystem_path_from(self._output_folder, step_folder_name)
 
     def _update_trace(self):
         step_info = self._steps[-1].info()
@@ -142,7 +134,7 @@ class ISXPipeline(CIPipe):
         step_folder = self._step_folder_path(step_name)
         copied_files = []
         for file in files:
-            dest = os.path.join(step_folder, os.path.basename(file))
+            dest = build_filesystem_path_from(step_folder, last_part_of_path(file))
             shutil.copy2(file, dest)
             copied_files.append(dest)
         return copied_files
