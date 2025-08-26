@@ -12,3 +12,6 @@ def list_directory_contents(directory):
 
 def last_part_of_path(path):
     return os.path.basename(path)
+
+def is_content_available_in(path):
+    return os.path.exists(path)

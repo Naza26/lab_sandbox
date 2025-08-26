@@ -5,13 +5,14 @@ import shutil
 from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
-from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path
+from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
+    is_content_available_in
 
 
 class ISXPipeline(CIPipe):
     isx_package: ClassVar[Any] = importlib.import_module("isx")
 
-    def __init__(self, output_folder, inputs, logger):
+    def __init__(self, inputs, logger):
         super().__init__(inputs)
         self._isx = self.__class__.isx_package
         self._steps = []
@@ -19,14 +20,17 @@ class ISXPipeline(CIPipe):
         self._output_folder = self._logger.directory()
 
     @classmethod
-    def new(cls, input_folder, output_folder, logger):
-        inputs = cls._scan_files(input_folder)
-        return cls(output_folder, inputs, logger)
+    def new(cls, input_directory, logger):
+        if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
+            raise ValueError("Cannot create new pipeline with different input data in already created output directory")
+        inputs = cls._scan_files(input_directory)
+        return cls(inputs, logger)
 
     @classmethod
     def _scan_files(cls, input_folder: str):
         files = [
-            build_filesystem_path_from(input_folder, f) for f in list_directory_contents(input_folder) if f.endswith('.isxd')]
+            build_filesystem_path_from(input_folder, f) for f in list_directory_contents(input_folder) if
+            f.endswith('.isxd')]
         return {"videos": files}
 
     def step(self, step_name, step_function, *args):
