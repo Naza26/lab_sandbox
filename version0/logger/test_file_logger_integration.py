@@ -13,7 +13,7 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
 
         self.assertTrue(self._expected_response())
 
-    def test_pipeline_throws_error_if_recovery_is_attempted_without_flag(self):
+    def test_pipeline_throws_error_if_workflow_continuation_is_attempted_with_different_input_directory(self):
         input_directory = "videos"
         output_directory = "logs"
         logger = FileLogger.new_for("test_01.json", output_directory)
