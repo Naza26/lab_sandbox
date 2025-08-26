@@ -1,7 +1,5 @@
 import unittest
 
-from isx_pipeline.isx_pipeline import ISXPipeline
-from logger.file_logger import FileLogger
 from logger.mock_file_logger import MockFileLogger
 
 

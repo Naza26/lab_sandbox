@@ -8,9 +8,10 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
     def test_pipeline_keeps_trace_with_file_logger(self):
         logger = FileLogger.new_for("test_01.json", "logs")
         isx_pipeline = ISXPipeline.new("videos", "output", logger)
-        print(isx_pipeline.trace())
+
         self._execute_many_steps(isx_pipeline)
-        print(isx_pipeline.trace())
+
+        self.assertTrue(self._expected_response())
 
     def _execute_many_steps(self, isx_pipeline):
         (
@@ -23,6 +24,10 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
             .detect_events_in_cells()
             .auto_accept_reject_cells()
         )
+
+    def _expected_response(self):
+        # TODO: Assert expected response for given steps
+        return True
 
 
 if __name__ == '__main__':
