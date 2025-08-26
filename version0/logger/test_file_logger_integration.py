@@ -32,8 +32,7 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
                 logger,
             )
         error_message = result.exception.args[0]
-        self.assertEqual(error_message,
-                         "Cannot create new pipeline with different input data in already created output directory")
+        self.assertEqual(error_message, ISXPipeline.INVALID_INPUT_DIRECTORY_ERROR)
 
     def _execute_many_steps(self, isx_pipeline):
         (

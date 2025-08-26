@@ -10,6 +10,7 @@ from utils import build_filesystem_path_from, create_directory_from, list_direct
 
 
 class ISXPipeline(CIPipe):
+    INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
     isx_package: ClassVar[Any] = importlib.import_module("isx")
 
     def __init__(self, inputs, logger):
@@ -22,7 +23,7 @@ class ISXPipeline(CIPipe):
     @classmethod
     def new(cls, input_directory, logger):
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
-            raise ValueError("Cannot create new pipeline with different input data in already created output directory")
+            raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
         return cls(inputs, logger)
 
