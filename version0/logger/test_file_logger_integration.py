@@ -34,6 +34,26 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
         error_message = result.exception.args[0]
         self.assertEqual(error_message, ISXPipeline.INVALID_INPUT_DIRECTORY_ERROR)
 
+    def test_pipeline_can_continue_workflow_execution_if_same_input_and_output_directory_are_provided(self):
+        input_directory = "videos"
+        output_directory = "logs"
+        logger = FileLogger.new_for("test_01.json", output_directory)
+        isx_pipeline = ISXPipeline.new(
+            input_directory,
+            logger,
+        )
+
+        isx_pipeline.preprocess_videos()
+
+        another_isx_pipeline = ISXPipeline.new(
+            input_directory,
+            logger,
+        )
+
+        another_isx_pipeline.bandpass_filter_videos()
+
+        print(another_isx_pipeline.trace())
+
     def _execute_many_steps(self, isx_pipeline):
         (
             isx_pipeline
