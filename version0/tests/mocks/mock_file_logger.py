@@ -1,6 +1,6 @@
 from collections import deque
 
-from logger.mock_log_result import MockLogResult
+from tests.mocks.mock_log_result import MockLogResult
 
 
 class MockFileLogger:

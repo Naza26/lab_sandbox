@@ -4,7 +4,7 @@ from isx_pipeline.isx_pipeline import ISXPipeline
 from logger.file_logger import FileLogger
 
 
-class FileLoggerPipelineIntegrationTests(unittest.TestCase):
+class ISXFileLoggerPipelineIntegrationTests(unittest.TestCase):
     def test_pipeline_keeps_trace_with_file_logger(self):
         logger = FileLogger.new_for("test_01.json", "logs")
         isx_pipeline = ISXPipeline.new("videos", logger)
@@ -50,7 +50,15 @@ class FileLoggerPipelineIntegrationTests(unittest.TestCase):
             logger,
         )
 
-        another_isx_pipeline.bandpass_filter_videos()
+        (another_isx_pipeline
+         .bandpass_filter_videos()
+         .motion_correction_videos()
+         .normalize_dff_videos()
+         .extract_neurons_pca_ica()
+         .detect_events_in_cells()
+         .auto_accept_reject_cells()
+
+         )
 
         print(another_isx_pipeline.trace())
 

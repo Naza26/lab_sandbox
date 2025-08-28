@@ -1,9 +1,9 @@
 import unittest
 
-from logger.mock_file_logger import MockFileLogger
+from tests.mocks.mock_file_logger import MockFileLogger
 
 
-class FileLoggerTests(unittest.TestCase):
+class FileLoggerMemoryTests(unittest.TestCase):
     def setUp(self):
         self._filename = "test"
         self._directory = "logs"
