@@ -134,8 +134,9 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
     def _step_folder_path(self, step_name):
-        step_index = len(self._steps)
-        step_folder_name = f"step {step_index + 1} - {step_name}"
+        steps = list(self._logger.read_json_from_file().keys())
+        last_step_index_from_trace = int(steps[-1]) if steps else 0
+        step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
         return build_filesystem_path_from(self._output_folder, step_folder_name)
 
     def _update_trace(self):
