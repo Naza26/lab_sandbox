@@ -5,20 +5,25 @@ from logger.file_logger import FileLogger
 
 
 class ISXFileLoggerPipelineIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self._filename = "test_01.json"
+        self._output_directory = "logs"
+        self._input_directory = "videos"
+        self._filepath = f"{self._output_directory}/{self._filename}"
+        self._delete_log_directory_from_filesystem()
+
     def test_pipeline_keeps_trace_with_file_logger(self):
-        logger = FileLogger.new_for("test_01.json", "logs")
-        isx_pipeline = ISXPipeline.new("videos", logger)
+        logger = FileLogger.new_for(self._filename, self._output_directory)
+        isx_pipeline = ISXPipeline.new(self._input_directory, logger)
 
         self._execute_many_steps(isx_pipeline)
 
         self.assertTrue(self._expected_response())
 
     def test_pipeline_throws_error_if_workflow_continuation_is_attempted_with_different_input_directory(self):
-        input_directory = "videos"
-        output_directory = "logs"
-        logger = FileLogger.new_for("test_01.json", output_directory)
+        logger = FileLogger.new_for(self._filename, self._output_directory)
         isx_pipeline = ISXPipeline.new(
-            input_directory,
+            self._input_directory,
             logger,
         )
 
@@ -35,18 +40,16 @@ class ISXFileLoggerPipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(error_message, ISXPipeline.INVALID_INPUT_DIRECTORY_ERROR)
 
     def test_pipeline_can_continue_workflow_execution_if_same_input_and_output_directory_are_provided(self):
-        input_directory = "videos"
-        output_directory = "logs"
-        logger = FileLogger.new_for("test_01.json", output_directory)
+        logger = FileLogger.new_for(self._filename, self._output_directory)
         isx_pipeline = ISXPipeline.new(
-            input_directory,
+            self._input_directory,
             logger,
         )
 
         isx_pipeline.preprocess_videos()
 
         another_isx_pipeline = ISXPipeline.new(
-            input_directory,
+            self._input_directory,
             logger,
         )
 
@@ -78,6 +81,8 @@ class ISXFileLoggerPipelineIntegrationTests(unittest.TestCase):
         # TODO: Assert expected response for given steps
         return True
 
+    def _delete_log_directory_from_filesystem(self):
+        pass
 
 if __name__ == '__main__':
     unittest.main()

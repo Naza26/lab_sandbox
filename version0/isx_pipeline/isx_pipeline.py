@@ -5,6 +5,7 @@ import shutil
 from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
+from ci_pipe.step import Step
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
@@ -19,6 +20,8 @@ class ISXPipeline(CIPipe):
         self._steps = []
         self._logger = logger
         self._output_folder = self._logger.directory()
+        if not self._logger.is_empty():
+            self._reconstruct_steps_from_log_if_present()
 
     @classmethod
     def new(cls, input_directory, logger):
@@ -140,18 +143,15 @@ class ISXPipeline(CIPipe):
         return build_filesystem_path_from(self._output_folder, step_folder_name)
 
     def _update_trace(self):
-        step_info = self._steps[-1].info()
-        trace = self._logger.read_json_from_file()
-        self._add_step_to_trace(step_info, trace)
+        trace = {}
+        for step_index, step in enumerate(self._steps, 1):
+            step_info = step.info()
+            trace[str(step_index)] = {
+                "algorithm": step_info["name"],
+                "input": [item for v in step_info["input"].values() for item in v],
+                "output": [item for v in step_info["output"].values() for item in v]
+            }
         self._logger.write_json_to_file(trace)
-
-    def _add_step_to_trace(self, step_info, trace):
-        step_number = str(len(self._steps))
-        trace[step_number] = {
-            "algorithm": step_info["name"],
-            "input": [item for v in step_info["input"].values() for item in v],
-            "output": [item for v in step_info["output"].values() for item in v]
-        }
 
     def _input_and_output_files(self, input, input_key, step_name, output_suffix):
         input_files = input(input_key)
@@ -203,3 +203,17 @@ class ISXPipeline(CIPipe):
             shutil.copy2(file, dest)
             copied_files.append(dest)
         return copied_files
+
+    def _reconstruct_steps_from_log_if_present(self):
+        trace = self._logger.read_json_from_file()
+        for step_number in sorted(trace, key=lambda x: int(x)):
+            step_input, step_name, step_output = self._step_data_from_log(step_number, trace)
+            step = Step(step_name, step_input, step_outputs=step_output)
+            self._steps.append(step)
+
+    def _step_data_from_log(self, step_number, trace):
+        step_data = trace[step_number]
+        step_name = step_data["algorithm"]
+        step_input = {"input": step_data["input"]}
+        step_output = {"output": step_data["output"]}
+        return step_input, step_name, step_output
