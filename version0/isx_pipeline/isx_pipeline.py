@@ -20,8 +20,10 @@ class ISXPipeline(CIPipe):
         self._logger = logger
         self._output_folder = self._logger.directory()
         self._steps = []
+        self._completed_step_names = set()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
+            self._completed_step_names = set(step.info()["name"] for step in self._steps)
 
     @classmethod
     def new(cls, input_directory, logger):
@@ -38,12 +40,14 @@ class ISXPipeline(CIPipe):
         return {"videos": files}
 
     def step(self, step_name, step_function, *args):
+        if step_name in self._completed_step_names:
+            return None
         step_folder_path = self._step_folder_path(step_name)
         create_directory_from(step_folder_path)
 
         result = super().step(step_name, step_function, *args)
         self._update_trace()
-
+        self._completed_step_names.add(step_name)
         return result
 
     def trace(self):
