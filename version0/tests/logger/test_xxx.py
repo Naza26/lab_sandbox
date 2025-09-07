@@ -13,7 +13,7 @@ class MyTestCase(unittest.TestCase):
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self.assertTrue(logged_data.as_json() == {})
+        self._assert_algorithm_was_not_executed(logged_data, "Preprocess Videos")
 
     def test_pipeline_executes_algorithm_if_there_is_data_to_run(self):
         input_directory = "videos"
@@ -23,7 +23,23 @@ class MyTestCase(unittest.TestCase):
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self.assertTrue(logged_data.as_json() != {})
+        self._assert_algorithm_was_executed(logged_data, "Preprocess Videos")
+
+    def _assert_algorithm_was_executed(self, logged_data, step_name):
+        algorithms_executed = list(logged_data.as_json().keys())
+        algorithm_execution_name = list(logged_data.as_json().values())[0].get("algorithm", None)
+        algorithm_execution_output = list(logged_data.as_json().values())[0].get("output", None)
+        self.assertEqual(len(algorithms_executed), 1)
+        self.assertEqual(algorithm_execution_name, step_name)
+        self.assertNotEquals(algorithm_execution_output,[])
+
+    def _assert_algorithm_was_not_executed(self, logged_data, step_name):
+        algorithms_executed = list(logged_data.as_json().keys())
+        algorithm_execution_name = list(logged_data.as_json().values())[0].get("algorithm", None)
+        algorithm_execution_output = list(logged_data.as_json().values())[0].get("output", None)
+        self.assertEqual(len(algorithms_executed), 1)
+        self.assertEqual(algorithm_execution_name, step_name)
+        self.assertEqual(algorithm_execution_output,[])
 
 
 

@@ -23,7 +23,7 @@ class ISXPipeline(CIPipe):
         self._completed_step_names = set()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
-            self._completed_step_names = set(step.info()["name"] for step in self._steps)
+            self._completed_step_names = set(step.name() for step in self._steps)
 
     @classmethod
     def new(cls, input_directory, logger):

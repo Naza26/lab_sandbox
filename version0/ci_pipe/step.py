@@ -26,6 +26,18 @@ class Step:
     def step_output(self):
         return self._step_outputs
 
+    def name(self):
+        return self._step_name
+
+    def input(self):
+        return self._step_input
+
+    def output(self):
+        return self._step_outputs
+
+    # All the calls to this method, are tests which are coupled to this specific implementation
+    # so changing the structure of the returned dictionary will require changing all those tests
+    # Think of value of those tests, refactor them. Remove this method later.
     def info(self):
         return {
             "name": self._step_name,
