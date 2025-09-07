@@ -13,6 +13,12 @@ class MockFileLogger:
         self._mocked_logs = deque()
         self._filepath = filepath
 
+    def read_json_from_file(self):
+        return {}
+
+    def directory(self):
+        return self._filepath.rsplit('/', 1)[0]
+
     def add_log(self, data):
         self._mocked_logs.extend([data])
 
