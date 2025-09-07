@@ -53,36 +53,37 @@ class MockedISXPipeline(CIPipe):
 
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
-            return {}
+            return {"videos": ["bandpassed_video_1.isxd"]}
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def motion_correction_videos(self, name="Motion Correction Videos", series_name="series"):
         def wrapped_step(input):
-            return {}
+            return {'videos': "motion_corrected_video_1.isxd", 'translations': [], 'crop_rect': [],
+                    'mean_projection': []}
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def normalize_dff_videos(self, name="Normalize dF/F Videos"):
         def wrapped_step(input):
-            return {}
+            return {"videos": ["normalized_video_1.isxd"]}
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
         def wrapped_step(input):
-            return {}
+            return {'cellsets': ["cellset_1.isxd"], 'spatial_filters': ["spatial_filters_1.isxd"],}
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def detect_events_in_cells(self, name="Detect Events in Cells"):
         def wrapped_step(input):
-            return {}
+            return {"events": ["events_1.isxd"]}
 
         return self.step(name, lambda input: wrapped_step(input))
 
     def auto_accept_reject_cells(self, name="Auto Accept-Reject Cells"):
         def wrapped_step(input):
-            return {}
+            return {"cellsets": ["auto_accepted_cellset_1.isxd"]}
 
         return self.step(name, lambda input: wrapped_step(input))

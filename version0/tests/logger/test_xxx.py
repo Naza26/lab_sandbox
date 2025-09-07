@@ -26,6 +26,21 @@ class MyTestCase(unittest.TestCase):
         logged_data = isx_pipeline.trace()
         self._assert_algorithm_was_executed(logged_data, "Preprocess Videos")
 
+    def test_pipeline_can_execute_multiple_algorithms_and_keep_trace_of_their_results(self):
+        input_directory = "videos"
+        isx_pipeline = self._build_pipeline_with(input_directory)
+
+        (isx_pipeline
+         .preprocess_videos()
+         .bandpass_filter_videos()
+         .motion_correction_videos()
+         .normalize_dff_videos()
+         .extract_neurons_pca_ica())
+
+        logged_data = isx_pipeline.trace()
+        print(logged_data.as_json())
+        # self._assert_algorithm_was_executed(logged_data, "Extract Neurons PCA ICA")
+
     def _build_pipeline_with(self, input_directory):
         return MockedISXPipeline.new(input_directory, self._logger)
 
