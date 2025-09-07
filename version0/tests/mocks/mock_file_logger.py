@@ -19,7 +19,7 @@ class MockFileLogger:
     def is_empty(self):
         return len(self._mocked_logs) == 0
 
-    def all_logs_as_json(self):
+    def all_logs(self):
         log_data = self._mocked_logs.popleft()
         result = MockLogResult(log_data)
-        return result.as_json()
+        return result

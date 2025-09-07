@@ -19,8 +19,9 @@ class FileLoggerMemoryTests(unittest.TestCase):
 
         file_logger.add_log(mocked_object)
 
-        logged_json_data = file_logger.all_logs_as_json()
-        self.assertTrue(logged_json_data == mocked_object)
+        all_logs = file_logger.all_logs()
+        all_logs_as_json = all_logs.as_json()
+        self.assertTrue(all_logs_as_json == mocked_object)
 
 
 if __name__ == '__main__':
