@@ -13,7 +13,7 @@ class MyTestCase(unittest.TestCase):
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self.assertTrue(logged_data == {})
+        self.assertTrue(logged_data.as_json() == {})
 
     def test_pipeline_executes_algorithm_if_there_is_data_to_run(self):
         input_directory = "videos"
@@ -23,7 +23,7 @@ class MyTestCase(unittest.TestCase):
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self.assertTrue(logged_data != {})
+        self.assertTrue(logged_data.as_json() != {})
 
 
 
