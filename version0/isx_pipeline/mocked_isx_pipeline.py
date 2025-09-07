@@ -2,6 +2,10 @@ from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
 
 
+class MockedISXResult:
+    pass
+
+
 class MockedISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
 
@@ -25,7 +29,12 @@ class MockedISXPipeline(CIPipe):
         return {"videos": []}
 
     def step(self, step_name, step_function, *args):
-        return {}
+        mocked_isx_result = MockedISXResult()
+        trace = TraceBuilder.build_dictionary_trace_from(self._steps)
+        self._logger.write_json_to_file(trace)
+        self._logger.add_log(trace)
+        self._completed_step_names.add(step_name)
+        return mocked_isx_result
 
     def trace(self):
         return self._logger.read_json_from_file()

@@ -14,7 +14,10 @@ class MockFileLogger:
         self._filepath = filepath
 
     def read_json_from_file(self):
-        return {}
+        return self.all_logs()
+
+    def write_json_to_file(self, data):
+        pass
 
     def directory(self):
         return self._filepath.rsplit('/', 1)[0]
@@ -26,6 +29,8 @@ class MockFileLogger:
         return len(self._mocked_logs) == 0
 
     def all_logs(self):
+        if self.is_empty():
+            return {}
         log_data = self._mocked_logs.popleft()
         result = MockLogResult(log_data)
         return result
