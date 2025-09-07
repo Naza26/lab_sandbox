@@ -2,17 +2,17 @@ from typing import List
 
 from ci_pipe.step import Step
 
-
 class TraceBuilder:
     @staticmethod
     def build_dictionary_trace_from(steps: List[Step]):
         trace = {}
         for step_index, step in enumerate(steps, 1):
-            step_info = step.info()
+            step_input = step.input()
+            step_output = step.output()
             trace[str(step_index)] = {
-                "algorithm": step_info["name"],
-                "input": [item for v in step_info["input"].values() for item in v],
-                "output": [item for v in step_info["output"].values() for item in v]
+                "algorithm": step.name(),
+                "input": [item for v in step_input.values() for item in v],
+                "output": [item for v in step_output.values() for item in v]
             }
         return trace
 
