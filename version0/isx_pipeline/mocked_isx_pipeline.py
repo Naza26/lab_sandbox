@@ -45,7 +45,7 @@ class MockedISXPipeline(CIPipe):
 
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
-            if "videos" == list(self._pipeline_inputs.keys())[0]:
+            if len(list(self._pipeline_inputs.values())[0]) == 1:
                 return {"videos": ["preprocessed_video_1.isxd"]}
             return {"videos": []}
 
