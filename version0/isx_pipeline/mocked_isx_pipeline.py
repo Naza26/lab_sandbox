@@ -25,6 +25,8 @@ class MockedISXPipeline(CIPipe):
 
     @classmethod
     def _scan_files(cls, input_folder: str):
+        if input_folder == "videos":
+            return {"videos": ["video1.isxd"]}
         return {"videos": []}
 
     def step(self, step_name, step_function, *args):
@@ -43,7 +45,9 @@ class MockedISXPipeline(CIPipe):
 
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
-            return {}
+            if "videos" == list(self._pipeline_inputs.keys())[0]:
+                return {"videos": ["preprocessed_video_1.isxd"]}
+            return {"videos": []}
 
         return self.step(name, lambda input: wrapped_step(input))
 
