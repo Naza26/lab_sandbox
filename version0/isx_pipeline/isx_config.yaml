@@ -1,0 +1,27 @@
+preprocess_videos:
+  # actualmente no hay parámetros
+
+bandpass_filter_videos:
+  low_cutoff: 0.005
+  high_cutoff: 0.5
+
+motion_correction_videos:
+  max_translation: 20
+  series_name: "series"
+
+normalize_dff_videos:
+  f0_type: "mean"
+
+extract_neurons_pca_ica:
+  num_components: 180
+  num_pc: 207
+  block_size: 1000
+
+detect_events_in_cells:
+  threshold: 5
+
+auto_accept_reject_cells:
+  filters:
+    - [ "SNR", ">", 3 ]
+    - [ "Event Rate", ">", 0 ]
+    - [ "# Comps", "=", 1 ]
