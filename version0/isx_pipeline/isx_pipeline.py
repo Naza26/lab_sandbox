@@ -14,23 +14,45 @@ class ISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
     isx_package: ClassVar[Any] = importlib.import_module("isx")
 
-    def __init__(self, inputs, logger):
+    def __init__(self, inputs, logger, branch_name = "branch 1"):
         super().__init__(inputs)
+        self.inputs = inputs
         self._isx = self.__class__.isx_package
         self._logger = logger
         self._output_folder = self._logger.directory()
         self._steps = []
+        self.branch_name = branch_name
+        self._output_folder, self._trace_file = self._create_output_folder("output")
         self._completed_step_names = set()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
             self._completed_step_names = set(step.info()["name"] for step in self._steps)
 
     @classmethod
-    def new(cls, input_directory, logger):
+    def new(cls, input_directory, logger, branch_name = "branch 1"):
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
-        return cls(inputs, logger)
+        return cls(inputs, logger, branch_name)
+
+    def branch(self, branch_name):
+        new_pipeline = ISXPipeline(
+            inputs=self.inputs,
+            logger=self._logger,
+            branch_name=branch_name
+        )
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
+
+        if self.branch_name in trace:
+            base_branch_trace = trace[self.branch_name]
+            trace[branch_name] = dict(base_branch_trace)
+            with open(self._trace_file, "w") as f:
+                json.dump(trace, f, indent=4)
+
+        new_pipeline._steps = list(self._steps)
+        return new_pipeline
+
 
     @classmethod
     def _scan_files(cls, input_folder: str):
@@ -51,12 +73,18 @@ class ISXPipeline(CIPipe):
         return result
 
     def trace(self):
-        self._logger.read_json_from_file()
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
+        branch_trace = trace.get(self.branch_name, {})
+        return {
+            "branch_name": self.branch_name,
+            "steps": branch_trace
+        }
 
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
-            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            #self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -64,7 +92,7 @@ class ISXPipeline(CIPipe):
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
-            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005, high_cutoff=0.5))
+            #self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005, high_cutoff=0.5))
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -97,7 +125,7 @@ class ISXPipeline(CIPipe):
     def normalize_dff_videos(self, name="Normalize dF/F Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'DFF')
-            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.dff(i, o, f0_type='mean'))
+            #self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.dff(i, o, f0_type='mean'))
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -141,14 +169,34 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
     def _step_folder_path(self, step_name):
-        steps = list(self._logger.read_json_from_file().keys())
-        last_step_index_from_trace = int(steps[-1]) if steps else 0
-        step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
-        return build_filesystem_path_from(self._output_folder, step_folder_name)
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
+        
+        branch_trace = trace.get(self.branch_name, {})
+        step_index = len(branch_trace) + 1
+
+        step_folder_name = f"{self.branch_name} - step {step_index} - {step_name}"
+        return os.path.join(self._output_folder, step_folder_name)
+
 
     def _update_trace(self):
-        trace = TraceBuilder.build_dictionary_trace_from(self._steps)
-        self._logger.write_json_to_file(trace)
+        step_info = self._steps[-1].info()
+        with open(self._trace_file, "r") as f:
+            trace = json.load(f)
+        if self.branch_name not in trace:
+            trace[self.branch_name] = {}
+        self._add_step_to_trace(step_info, trace[self.branch_name])
+
+        with open(self._trace_file, "w") as f:
+            json.dump(trace, f, indent=4)
+
+    def _add_step_to_trace(self, step_info, branch_trace):
+        step_number = str(len(branch_trace) + 1)
+        branch_trace[step_number] = {
+            "algorithm": step_info["name"],
+            "input": [item for v in step_info["input"].values() for item in v],
+            "output": [item for v in step_info["output"].values() for item in v]
+        }
 
     def _input_and_output_files(self, input, input_key, step_name, output_suffix):
         input_files = input(input_key)
@@ -158,6 +206,15 @@ class ISXPipeline(CIPipe):
             out_file = self._isx.make_output_file_paths([in_file], step_folder, output_suffix)[0]
             input_output_pairs.append((in_file, out_file))
         return input_output_pairs
+    
+    def _create_output_folder(self, output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+
+        trace_path = os.path.join(output_folder, "trace.json")
+        if not os.path.exists(trace_path):
+            with open(trace_path, 'w') as f:
+                f.write("{}")
+        return output_folder, trace_path
 
     def _process_input_output_pairs(self, input_output_pairs, fn):
         for in_file, out_file in input_output_pairs:
