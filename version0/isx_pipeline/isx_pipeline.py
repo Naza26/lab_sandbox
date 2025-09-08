@@ -20,12 +20,15 @@ class ISXPipeline(CIPipe):
         self._isx = self.__class__.isx_package
         self._logger = logger
         self._output_folder = self._logger.directory()
+        self._trace_file = self._logger.filepath()
         self._steps = []
         self.branch_name = branch_name
-        self._output_folder, self._trace_file = self._create_output_folder("output")
         self._completed_step_names = set()
         if not self._logger.is_empty():
-            self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
+            self._steps = TraceBuilder.build_steps_from_trace(
+                self._logger.read_json_from_file(),
+                branch_name=self.branch_name
+            )
             self._completed_step_names = set(step.info()["name"] for step in self._steps)
 
     @classmethod
