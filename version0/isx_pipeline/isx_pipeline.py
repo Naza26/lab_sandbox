@@ -154,19 +154,15 @@ class ISXPipeline(CIPipe):
         with open(config_path, "r") as f:
             return yaml.safe_load(f)
         
-    def add_parameters(self, step_name, params):
-        try:
-            with open(self._trace_file, "r") as f:
-                data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            data = {}
-        if step_name not in data:
-            data[step_name] = []
 
-        data[step_name].append(params)
+    def get_parameters(self, name, **optional):
+        cfg = self.defaults.get(name, {})
+        parameters = dict(cfg)
+        parameters.update(optional)
+        self.last_parameters = parameters
 
-        with open(self._trace_file, "w") as f:
-            json.dump(data, f, indent=4)
+
+
 
 
 # ----------- #
@@ -183,15 +179,10 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
     
 
-    def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
+    def bandpass_filter_videos(self, name="Bandpass Filter Videos", **kwargs):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
-            cfg = self.defaults.get('bandpass_filter_videos', {})
-            self.last_parameters = {
-                'low_cutoff': cfg.get('low_cutoff', 0.005),
-                'high_cutoff': cfg.get('high_cutoff', 0.5)
-            }
-
+            self.get_parameters(name, **kwargs)
             # self._process_input_output_pairs(
             #     input_output_pairs,
             #     lambda i, o: self._isx.spatial_filter(
@@ -206,14 +197,10 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
 
-    def motion_correction_videos(self, name="Motion Correction Videos"):
+    def motion_correction_videos(self, name="Motion Correction Videos", **kwargs):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'MC')
-            cfg = self.defaults.get('motion_correction_videos', {})
-            self.last_parameters = {
-                'max_translation': cfg.get('max_translation', 20),
-                'series_name': cfg.get('series_name', 'series')
-            }
+            self.get_parameters(name, **kwargs)
             step_folder = self._step_folder_path(name)
             mc_files = []
             translation_files = []
@@ -245,13 +232,11 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
 
-    def normalize_dff_videos(self, name="Normalize dF/F Videos"):
+    def normalize_dff_videos(self, name="Normalize dF/F Videos", **kwargs):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'DFF')
-            cfg = self.defaults.get('normalize_dff_videos', {})
-            self.last_parameters = {
-                'f0_type': cfg.get('f0_type', 'mean')
-            }
+            self.get_parameters(name, **kwargs)
+
 
             # self._process_input_output_pairs(input_output_pairs,
             #     lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
@@ -261,15 +246,11 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
 
-    def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA"):
+    def extract_neurons_pca_ica(self, name="Extract Neurons PCA-ICA", **kwargs):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
-            cfg = self.defaults.get('extract_neurons_pca_ica', {})
-            self.last_parameters = {
-                'num_components': cfg.get('num_components', 180),
-                'num_pc': cfg.get('num_pc', 207),
-                'block_size': cfg.get('block_size', 1000)
-            }
+            self.get_parameters(name, **kwargs)
+
 
             cellsets = []
             """
@@ -287,13 +268,11 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
 
-    def detect_events_in_cells(self, name="Detect Events in Cells"):
+    def detect_events_in_cells(self, name="Detect Events in Cells", **kwargs):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'cellsets', name, 'ED')
-            cfg = self.defaults.get('detect_events_in_cells', {})
-            self.last_parameters = {
-                'threshold': cfg.get('threshold', 5)
-            }
+            self.get_parameters(name, **kwargs)
+
 
             events = []
 
@@ -307,15 +286,13 @@ class ISXPipeline(CIPipe):
         return self.step(name, lambda input: wrapped_step(input))
 
 
-    def auto_accept_reject_cells(self, name="Auto Accept-Reject Cells"):
+    def auto_accept_reject_cells(self, name="Auto Accept-Reject Cells", **kwargs):
         def wrapped_step(input):
             input_cellsets = input('cellsets')
             copied_cellsets = self._copy_files_to_step_folder(input_cellsets, name)
             input_events = input('events')
-            cfg = self.defaults.get('auto_accept_reject_cells', {})
-            self.last_parameters = {
-                'filters': cfg.get('filters', [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)])
-            }
+            self.get_parameters(name, **kwargs)
+
 
             matches = self._match_events_to_cellsets(copied_cellsets, input_events)
             for cellset, event_file in matches.items():
