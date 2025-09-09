@@ -3,6 +3,8 @@ import json
 import os
 import shutil
 from typing import ClassVar, Any
+from rich.console import Console # type: ignore
+from rich.table import Table # type: ignore
 
 import yaml
 
@@ -41,6 +43,36 @@ class ISXPipeline(CIPipe):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
         return cls(inputs, logger, branch_name)
+    
+
+    def info(self, step_number):
+        console = Console()
+        step_number = str(step_number)
+        branch = self.branch_name 
+        with open(self._trace_file) as f:
+            trace = json.load(f)
+        try:
+            step = trace[branch][step_number]
+        except KeyError:
+            console.print(
+                f"[bold red]❌ Step {step_number} not found in branch '{branch}'[/bold red]"
+            )
+            return
+        table = Table(
+            title=f"Step {step_number} Info",
+            show_lines=True
+        )
+        table.add_column("Field", style="cyan", no_wrap=True)
+        table.add_column("Value", style="yellow")
+        table.add_row("Algorithm", step.get("algorithm", ""))
+        table.add_row("Input", "\n".join(step.get("input", [])))
+        table.add_row("Output", "\n".join(step.get("output", [])))
+        if "parameters" in step:
+            params = "\n".join([f"{k}: {v}" for k, v in step["parameters"].items()])
+            table.add_row("Parameters", params)
+        console.print(table)
+
+
 
     def branch(self, branch_name):
         new_pipeline = ISXPipeline(
