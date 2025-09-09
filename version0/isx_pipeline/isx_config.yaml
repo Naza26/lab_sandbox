@@ -1,0 +1,27 @@
+preprocess_videos:
+  # actualmente no hay parámetros
+
+"Bandpass Filter Videos":
+  low_cutoff: 0.005
+  high_cutoff: 0.5
+
+"Motion Correction Videos":
+  max_translation: 20
+  series_name: "series"
+
+"Normalize dF/F Videos":
+  f0_type: "mean"
+
+"Extract Neurons PCA-ICA":
+  num_components: 180
+  num_pc: 207
+  block_size: 1000
+
+"Detect Events in Cells":
+  threshold: 5
+
+"Auto Accept-Reject Cells":
+  filters:
+    - [ "SNR", ">", 3 ]
+    - [ "Event Rate", ">", 0 ]
+    - [ "# Comps", "=", 1 ]

@@ -17,13 +17,18 @@ class TraceBuilder:
         return trace
 
     @staticmethod
-    def build_steps_from_trace(trace: dict):
+    def build_steps_from_trace(trace: dict, branch_name: str):
+        if branch_name and branch_name in trace:
+            steps_data = trace[branch_name]
+        else:
+            if len(trace) == 1 and isinstance(next(iter(trace.values())), dict):
+                steps_data = next(iter(trace.values()))
+            else:
+                raise ValueError("El trace no corresponde a una rama válida")
+        
         steps = []
-        for step_number in sorted(trace, key=lambda x: int(x)):
-            step_data = trace[step_number]
+        for step_number in sorted(steps_data, key=lambda x: int(x)):
+            step_data = steps_data[step_number]
             step_name = step_data["algorithm"]
-            step_input = {"input": step_data["input"]}
-            step_output = {"output": step_data["output"]}
-            step = Step.from_log(step_name, step_input, step_output)
-            steps.append(step)
+            steps.append(Step(step_name, step_data))
         return steps
