@@ -227,7 +227,7 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
             self.last_parameters = {}
-            #self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -237,15 +237,15 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
             self.get_parameters(name, **kwargs)
-            # self._process_input_output_pairs(
-            #     input_output_pairs,
-            #     lambda i, o: self._isx.spatial_filter(
-            #         i, o,
-            #         low_cutoff=parameters['low_cutoff'],
-            #         high_cutoff=parameters['high_cutoff']
-            #     )
-            # )
-            #     
+            self._process_input_output_pairs(
+                 input_output_pairs,
+                 lambda i, o: self._isx.spatial_filter(
+                     i, o,
+                     low_cutoff=self.last_parameters['low_cutoff'],
+                     high_cutoff=self.last_parameters['high_cutoff']
+                 )
+             )
+                 
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -262,7 +262,6 @@ class ISXPipeline(CIPipe):
             crop_rect_files = []
             series_name = self.last_parameters['series_name']
             max_translation = self.last_parameters['max_translation']
-            """
             for in_file, out_file in input_output_pairs:
                 video_name = os.path.splitext(os.path.basename(in_file))[0]
                 mean_proj_file = os.path.join(step_folder, f'{video_name}-{series_name}-mean_image.isxd')
@@ -279,7 +278,6 @@ class ISXPipeline(CIPipe):
                 translation_files.append(translation_file)
                 mean_proj_files.append(mean_proj_file)
                 crop_rect_files.append(crop_rect_file)
-                """
             return {'videos': mc_files, 'translations': translation_files,
                     'crop_rect': crop_rect_files, 'mean_projection': mean_proj_files}
 
@@ -292,8 +290,8 @@ class ISXPipeline(CIPipe):
             self.get_parameters(name, **kwargs)
 
 
-            # self._process_input_output_pairs(input_output_pairs,
-            #     lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
+            self._process_input_output_pairs(input_output_pairs,
+                lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
 
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
@@ -307,7 +305,6 @@ class ISXPipeline(CIPipe):
 
 
             cellsets = []
-            """
             def pca_ica_fn(i, o):
                 self._isx.pca_ica(i, o,
                                 self.last_parameters['num_components'],
@@ -316,7 +313,6 @@ class ISXPipeline(CIPipe):
                 cellsets.append(o[0])
             
             self._process_input_output_pairs(input_output_pairs, pca_ica_fn)
-            """
             return {'cellsets': cellsets}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -331,7 +327,7 @@ class ISXPipeline(CIPipe):
             events = []
 
             def event_fn(i, o):
-                #self._isx.event_detection(i, o, threshold=self.last_parameters['threshold'])
+                self._isx.event_detection(i, o, threshold=self.last_parameters['threshold'])
                 events.append(o[0])
 
             self._process_input_output_pairs(input_output_pairs, event_fn)
@@ -351,7 +347,7 @@ class ISXPipeline(CIPipe):
             matches = self._match_events_to_cellsets(copied_cellsets, input_events)
             for cellset, event_file in matches.items():
                 print(f"[auto_accept_reject] MATCH: {os.path.basename(cellset)} -> {os.path.basename(event_file)}")
-                #self._isx.auto_accept_reject([cellset], [event_file], self.last_parameters['filters'])
+                self._isx.auto_accept_reject([cellset], [event_file], self.last_parameters['filters'])
 
             return {'cellsets': copied_cellsets}
 
