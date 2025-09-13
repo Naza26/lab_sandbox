@@ -66,6 +66,22 @@ class ISXPipelineTests(unittest.TestCase):
         error_message = result.exception.args[0]
         self.assertEqual(error_message, ISXPipeline.INVALID_INPUT_DIRECTORY_ERROR)
 
+    def test_pipeline_can_continue_workflow_execution_if_same_input_and_output_directory_are_provided(self):
+        input_directory = "videos"
+        an_isx_pipeline = self._build_pipeline_with(input_directory)
+
+        an_isx_pipeline.preprocess_videos()
+
+        another_isx_pipeline = self._build_pipeline_with(input_directory)
+        another_isx_pipeline.bandpass_filter_videos()
+
+        logged_data = another_isx_pipeline.trace()
+        print("Logged data:", logged_data.as_json())
+        expected_ran_algorithms = [AvailableISXAlgorithms.PREPROCESS_VIDEOS.value, AvailableISXAlgorithms.BANDPASS_FILTER_VIDEOS.value]
+        self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
+
+
+
     def _build_pipeline_with(self, input_directory):
         return ISXPipeline.new(self._isx, input_directory, self._logger)
 
