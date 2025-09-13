@@ -6,7 +6,7 @@ from tests.mocks.mock_file_logger import MockFileLogger
 from tests.mocks.mock_isx import MockedISX
 
 
-class MyTestCase(unittest.TestCase):
+class ISXPipelineTests(unittest.TestCase):
     def setUp(self):
         self._logger = MockFileLogger.new_for("test_01.json", "logs")
         self._isx = MockedISX()
