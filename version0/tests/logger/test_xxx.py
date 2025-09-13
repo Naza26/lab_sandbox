@@ -22,15 +22,17 @@ class MyTestCase(unittest.TestCase):
     def test_pipeline_executes_algorithm_if_there_is_data_to_run(self):
         input_directory = "videos"
         isx_pipeline = self._build_pipeline_with(input_directory)
+        expected_ran_algorithms = ["Preprocess Videos"]
 
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self._assert_algorithm_was_executed(logged_data, "Preprocess Videos")
+        self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
 
     def test_pipeline_can_execute_multiple_algorithms_and_keep_trace_of_their_results(self):
         input_directory = "videos"
         isx_pipeline = self._build_pipeline_with(input_directory)
+        expected_ran_algorithms = ["Preprocess Videos", "Bandpass Filter Videos", "Motion Correction Videos", "Normalize DFF Videos", "Extract Neurons PCA ICA"]
 
         (isx_pipeline
          .preprocess_videos()
@@ -46,17 +48,19 @@ class MyTestCase(unittest.TestCase):
     def _build_pipeline_with(self, input_directory):
         return ISXPipeline.new(self._isx, input_directory, self._logger)
 
-    def _assert_algorithm_was_executed(self, logged_data, step_name):
-        algorithms_executed = list(logged_data.as_json().keys())
-        if len(algorithms_executed) > 0:
-            algorithm_execution_name = list(logged_data.as_json().values())[0].get("algorithm", None)
-            algorithm_execution_output = list(logged_data.as_json().values())[0].get("output", None)
-            self.assertEqual(len(algorithms_executed), 1)
-            self.assertEqual(algorithm_execution_name, step_name)
-            self.assertIsNotNone(algorithm_execution_output)
-            self.assertNotEqual(algorithm_execution_output, [])
-        else:
+    def _assert_algorithm_was_executed(self, logged_data, expected_ran_algorithms):
+        executed_algorithms = list(logged_data.as_json().values())
+        if len(executed_algorithms) == 0:
             self.fail("No algorithms were executed")
+
+        for executed_algorithm in executed_algorithms:
+            algorithm_name = executed_algorithm.get("algorithm", None)
+            algorithm_output = executed_algorithm.get("output", None)
+            self.assertTrue(algorithm_name in expected_ran_algorithms)
+            self.assertIsNotNone(algorithm_output)
+            self.assertNotEqual(algorithm_output, [])
+
+        self.assertEqual(len(executed_algorithms), len(expected_ran_algorithms))
 
     def _assert_algorithm_was_not_executed(self, logged_data, step_name):
         logged_json = logged_data.as_json()
