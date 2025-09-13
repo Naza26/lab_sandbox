@@ -12,11 +12,10 @@ from utils import build_filesystem_path_from, create_directory_from, list_direct
 
 class ISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
-    isx_package: ClassVar[Any] = importlib.import_module("isx")
 
-    def __init__(self, inputs, logger):
+    def __init__(self, isx, inputs, logger):
         super().__init__(inputs)
-        self._isx = self.__class__.isx_package
+        self._isx = isx
         self._logger = logger
         self._output_folder = self._logger.directory()
         self._steps = []
@@ -26,11 +25,11 @@ class ISXPipeline(CIPipe):
             self._completed_step_names = set(step.name() for step in self._steps)
 
     @classmethod
-    def new(cls, input_directory, logger):
+    def new(cls, isx, input_directory, logger):
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
-        return cls(inputs, logger)
+        return cls(isx, inputs, logger)
 
     @classmethod
     def _scan_files(cls, input_folder: str):
