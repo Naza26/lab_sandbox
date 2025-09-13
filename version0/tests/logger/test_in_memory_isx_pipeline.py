@@ -49,6 +49,23 @@ class ISXPipelineTests(unittest.TestCase):
         print("Logged data:", logged_data.as_json())
         self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
 
+    def test_pipeline_throws_error_if_workflow_continuation_is_attempted_with_different_input_directory(self):
+        input_directory = "videos"
+        isx_pipeline = self._build_pipeline_with(input_directory)
+
+        isx_pipeline.preprocess_videos()
+
+        different_input_directory = "invalid"
+
+        with self.assertRaises(ValueError) as result:
+            ISXPipeline.new(
+                self._isx,
+                different_input_directory,
+                self._logger,
+            )
+        error_message = result.exception.args[0]
+        self.assertEqual(error_message, ISXPipeline.INVALID_INPUT_DIRECTORY_ERROR)
+
     def _build_pipeline_with(self, input_directory):
         return ISXPipeline.new(self._isx, input_directory, self._logger)
 
@@ -66,6 +83,7 @@ class ISXPipelineTests(unittest.TestCase):
 
         self.assertEqual(len(executed_algorithms), len(expected_ran_algorithms))
 
+    # TODO: Remove repeated code
     def _assert_algorithm_was_not_executed(self, logged_data, step_name):
         logged_json = logged_data.as_json()
         if logged_json and len(logged_json) > 0:
