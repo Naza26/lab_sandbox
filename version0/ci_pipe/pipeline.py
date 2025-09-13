@@ -1,4 +1,6 @@
 from ci_pipe.step import Step
+import inspect
+
 
 class CIPipe:
     def __init__(self, inputs):
@@ -11,7 +13,13 @@ class CIPipe:
         return self.next_step_input()
 
     def step(self, step_name, step_function, *args, **kwargs):
-        kwargs = {**self._defaults, **kwargs}
+        for name, param in inspect.signature(step_function).parameters.items():
+            if param.kind in (param.KEYWORD_ONLY, param.VAR_KEYWORD) and param.default is not inspect.Parameter.empty:
+                if name not in self._defaults:
+                    kwargs[name] = param.default
+                else:
+                    kwargs[name] = self._defaults[name]
+
         new_step = Step(step_name, self.next_step_input(), self.look_up_input, step_function, args, kwargs)
         self._steps.append(new_step)
         return self

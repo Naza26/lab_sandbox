@@ -1,0 +1,20 @@
+{
+    "1": {
+        "algorithm": "Preprocess Videos",
+        "input": [
+            "videos/simulation.isxd"
+        ],
+        "output": [
+            "output/step 1 - Preprocess Videos/simulation-PP.isxd"
+        ]
+    },
+    "2": {
+        "algorithm": "Bandpass Filter Videos",
+        "input": [
+            "output/step 1 - Preprocess Videos/simulation-PP.isxd"
+        ],
+        "output": [
+            "output/step 2 - Bandpass Filter Videos/simulation-PP-BP.isxd"
+        ]
+    }
+}

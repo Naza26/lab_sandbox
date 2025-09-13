@@ -185,6 +185,33 @@ class PipelineTestCase(unittest.TestCase):
         }
         self.assertEqual(info, expected_info)
 
+    def test_10_step_can_accept_unknown_default(self):
+        # Given
+        pipeline_raw_input = {'numbers': [2]}
+
+        # When
+        info = (CIPipe(pipeline_raw_input)
+                .set_defaults(factor=5)
+                .step("scale by default factor", self._scale_named_different)
+                .info())
+
+        # Then
+        expected_info = {
+            'defaults': {'factor': 5},
+            'inputs': {'numbers': [2]},
+            'output': {'numbers': [6]},
+            'steps': [
+                {
+                    'input': {'numbers': [2]},
+                    'name': 'scale by default factor',
+                    'output': {'numbers': [6]},
+                    'args': (),
+                    'kwargs': {'scale': 3}
+                }
+            ]
+        }
+        self.assertEqual(info, expected_info)
+
     # Helper functions for the steps
     def _add_one(self, inputs):
         return {'numbers': [inputs('numbers')[0] + 1]}
@@ -200,6 +227,9 @@ class PipelineTestCase(unittest.TestCase):
 
     def _scale_named(self, inputs, factor=3):
         return {'numbers': [x * factor for x in inputs('numbers')]}
+
+    def _scale_named_different(self, inputs, scale=3):
+        return {'numbers': [x * scale for x in inputs('numbers')]}
 
 
 if __name__ == '__main__':

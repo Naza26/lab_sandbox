@@ -6,6 +6,7 @@ from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
+from logger.file_logger import FileLogger
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
@@ -26,7 +27,9 @@ class ISXPipeline(CIPipe):
             self._completed_step_names = set(step.info()["name"] for step in self._steps)
 
     @classmethod
-    def new(cls, input_directory, logger):
+    def new(cls, input_directory, logger=None):
+        if not logger:
+            logger = FileLogger.new_for("trace.json", "output")
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
@@ -56,7 +59,9 @@ class ISXPipeline(CIPipe):
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
-            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            # isx.preprocess expects single input/output file paths (not lists), so call it directly per pair
+            for in_file, out_file in input_output_pairs:
+                self._isx.preprocess(in_file, out_file)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -139,6 +144,29 @@ class ISXPipeline(CIPipe):
             return {'cellsets': copied_cellsets}
 
         return self.step(name, lambda input: wrapped_step(input))
+
+    def export_movie_to_tiff(self, name="Export Movie to TIFF"):
+        input_videos = input('videos')
+        step_folder = self._step_folder_path(name)
+        tiff_files = []
+        for in_file in input_videos:
+            tiff_file = self._isx.make_output_file_paths([in_file], step_folder, 'tiff', 'tiff')[0]
+            self._isx.export_movie_to_tiff([in_file], [tiff_file])
+            tiff_files.append(tiff_file)
+            print(f"Exported movie to file {tiff_file}")
+        return self
+
+
+    def export_movie_to_nwb(self, name="Export Movie to NWB"):
+        def wrapped_step(input):
+            input_videos = input('videos')
+            step_folder = self._step_folder_path(name)
+            nwb_files = []
+            for in_file in input_videos:
+                nwb_file = self._isx.make_output_file_paths([in_file], step_folder, 'nwb', 'nwb')[0]
+                self._isx.export_movie_to_nwb([in_file], [nwb_file])
+                nwb_files.append(nwb_file)
+            return {'nwb': nwb_files}
 
     def _step_folder_path(self, step_name):
         steps = list(self._logger.read_json_from_file().keys())
