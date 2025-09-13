@@ -1,3 +1,4 @@
+
 from collections import deque
 
 from tests.mocks.mock_log_result import MockLogResult
@@ -14,7 +15,10 @@ class MockFileLogger:
         self._filepath = filepath
 
     def read_json_from_file(self):
-        return self.all_logs()
+        if self.is_empty():
+            return {}
+        log_data = self._mocked_logs.popleft()
+        return log_data
 
     def write_json_to_file(self, data):
         pass
@@ -30,7 +34,7 @@ class MockFileLogger:
 
     def all_logs(self):
         if self.is_empty():
-            return {}
+            return MockLogResult({})
         log_data = self._mocked_logs.popleft()
         result = MockLogResult(log_data)
         return result

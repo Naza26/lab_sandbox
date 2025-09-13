@@ -50,7 +50,7 @@ class ISXPipeline(CIPipe):
         return result
 
     def trace(self):
-        self._logger.read_json_from_file()
+        return self._logger.all_logs()
 
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
