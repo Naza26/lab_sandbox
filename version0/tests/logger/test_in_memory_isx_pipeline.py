@@ -76,7 +76,6 @@ class ISXPipelineTests(unittest.TestCase):
         another_isx_pipeline.bandpass_filter_videos()
 
         logged_data = another_isx_pipeline.trace()
-        print("Logged data:", logged_data.as_json())
         expected_ran_algorithms = [AvailableISXAlgorithms.PREPROCESS_VIDEOS.value, AvailableISXAlgorithms.BANDPASS_FILTER_VIDEOS.value]
         self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
 
