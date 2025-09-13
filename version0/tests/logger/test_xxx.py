@@ -1,5 +1,6 @@
 import unittest
 
+from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
 from isx_pipeline.isx_pipeline import ISXPipeline
 from tests.mocks.mock_file_logger import MockFileLogger
 from tests.mocks.mock_isx import MockedISX
@@ -17,12 +18,12 @@ class MyTestCase(unittest.TestCase):
         isx_pipeline.preprocess_videos()
 
         logged_data = isx_pipeline.trace()
-        self._assert_algorithm_was_not_executed(logged_data, "Preprocess Videos")
+        self._assert_algorithm_was_not_executed(logged_data, AvailableISXAlgorithms.PREPROCESS_VIDEOS.value)
 
     def test_pipeline_executes_algorithm_if_there_is_data_to_run(self):
         input_directory = "videos"
         isx_pipeline = self._build_pipeline_with(input_directory)
-        expected_ran_algorithms = ["Preprocess Videos"]
+        expected_ran_algorithms = [AvailableISXAlgorithms.PREPROCESS_VIDEOS.value]
 
         isx_pipeline.preprocess_videos()
 
@@ -32,7 +33,10 @@ class MyTestCase(unittest.TestCase):
     def test_pipeline_can_execute_multiple_algorithms_and_keep_trace_of_their_results(self):
         input_directory = "videos"
         isx_pipeline = self._build_pipeline_with(input_directory)
-        expected_ran_algorithms = ["Preprocess Videos", "Bandpass Filter Videos", "Motion Correction Videos", "Normalize DFF Videos", "Extract Neurons PCA ICA"]
+        expected_ran_algorithms = [
+            AvailableISXAlgorithms.PREPROCESS_VIDEOS.value, AvailableISXAlgorithms.BANDPASS_FILTER_VIDEOS.value,
+            AvailableISXAlgorithms.MOTION_CORRECTION_VIDEOS.value, AvailableISXAlgorithms.NORMALIZE_DFF_VIDEOS.value,
+            AvailableISXAlgorithms.EXTRACT_NEURONS_PCA_ICA.value]
 
         (isx_pipeline
          .preprocess_videos()
@@ -43,7 +47,7 @@ class MyTestCase(unittest.TestCase):
 
         logged_data = isx_pipeline.trace()
         print("Logged data:", logged_data.as_json())
-        self.assertGreater(len(logged_data.as_json()), 0, "Pipeline should have executed at least one step")
+        self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
 
     def _build_pipeline_with(self, input_directory):
         return ISXPipeline.new(self._isx, input_directory, self._logger)

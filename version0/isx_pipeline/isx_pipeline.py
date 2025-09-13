@@ -1,11 +1,9 @@
-import importlib
-import json
 import os
 import shutil
-from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
+from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
@@ -17,9 +15,8 @@ class ISXPipeline(CIPipe):
         super().__init__(inputs)
         self._isx = isx
         self._logger = logger
-        self._output_folder = self._logger.directory()
-        self._steps = []
         self._completed_step_names = set()
+        self.available_algorithms = AvailableISXAlgorithms
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
             self._completed_step_names = set(step.name() for step in self._steps)
@@ -63,7 +60,9 @@ class ISXPipeline(CIPipe):
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
-            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005, high_cutoff=0.5))
+            self._process_input_output_pairs(input_output_pairs,
+                                             lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005,
+                                                                                   high_cutoff=0.5))
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -83,7 +82,8 @@ class ISXPipeline(CIPipe):
                 translation_file = self._isx.make_output_file_paths([out_file], step_folder, 'translations', 'csv')[0]
                 self._isx.project_movie([in_file], mean_proj_file, stat_type='mean')
                 self._isx.motion_correct([in_file], [out_file], max_translation=20, reference_file_name=mean_proj_file,
-                                     output_translation_files=[translation_file], output_crop_rect_file=crop_rect_file)
+                                         output_translation_files=[translation_file],
+                                         output_crop_rect_file=crop_rect_file)
                 mc_files.append(out_file)
                 translation_files.append(translation_file)
                 mean_proj_files.append(mean_proj_file)
@@ -105,9 +105,11 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
             cellsets = []
+
             def pca_ica_fn(i, o):
                 self._isx.pca_ica(i, o, 180, int(1.15 * 180), block_size=1000)
                 cellsets.append(o[0])
+
             self._process_input_output_pairs(input_output_pairs, pca_ica_fn)
             return {'cellsets': cellsets}
 
@@ -117,9 +119,11 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'cellsets', name, 'ED')
             events = []
+
             def event_fn(i, o):
                 self._isx.event_detection(i, o, threshold=5)
                 events.append(o[0])
+
             self._process_input_output_pairs(input_output_pairs, event_fn)
             return {'events': events}
 
@@ -143,7 +147,7 @@ class ISXPipeline(CIPipe):
         steps = list(self._logger.read_json_from_file().keys())
         last_step_index_from_trace = int(steps[-1]) if steps else 0
         step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
-        return build_filesystem_path_from(self._output_folder, step_folder_name)
+        return build_filesystem_path_from(self._logger.directory(), step_folder_name)
 
     def _update_trace(self):
         trace = TraceBuilder.build_dictionary_trace_from(self._steps)
@@ -168,7 +172,7 @@ class ISXPipeline(CIPipe):
     def _match_events_to_cellsets(self, cellsets, events):
         # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
         # Exact prefix match: event basename must be f"{cellset_basename}-ED"
-        event_by_base = { self._basename_no_ext(ev): ev for ev in events }
+        event_by_base = {self._basename_no_ext(ev): ev for ev in events}
         matches = {}
         unmatched_cellsets = []
         for cs in cellsets:
