@@ -69,7 +69,9 @@ class ISXPipeline(CIPipe):
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
-            self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005, high_cutoff=0.5))
+            self._process_input_output_pairs(input_output_pairs,
+                                             lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005,
+                                                                                   high_cutoff=0.5))
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -89,7 +91,8 @@ class ISXPipeline(CIPipe):
                 translation_file = self._isx.make_output_file_paths([out_file], step_folder, 'translations', 'csv')[0]
                 self._isx.project_movie([in_file], mean_proj_file, stat_type='mean')
                 self._isx.motion_correct([in_file], [out_file], max_translation=20, reference_file_name=mean_proj_file,
-                                     output_translation_files=[translation_file], output_crop_rect_file=crop_rect_file)
+                                         output_translation_files=[translation_file],
+                                         output_crop_rect_file=crop_rect_file)
                 mc_files.append(out_file)
                 translation_files.append(translation_file)
                 mean_proj_files.append(mean_proj_file)
@@ -111,9 +114,11 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PCA-ICA')
             cellsets = []
+
             def pca_ica_fn(i, o):
                 self._isx.pca_ica(i, o, 180, int(1.15 * 180), block_size=1000)
                 cellsets.append(o[0])
+
             self._process_input_output_pairs(input_output_pairs, pca_ica_fn)
             return {'cellsets': cellsets}
 
@@ -123,9 +128,11 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'cellsets', name, 'ED')
             events = []
+
             def event_fn(i, o):
                 self._isx.event_detection(i, o, threshold=5)
                 events.append(o[0])
+
             self._process_input_output_pairs(input_output_pairs, event_fn)
             return {'events': events}
 
@@ -145,28 +152,37 @@ class ISXPipeline(CIPipe):
 
         return self.step(name, lambda input: wrapped_step(input))
 
-    def export_movie_to_tiff(self, name="Export Movie to TIFF"):
-        input_videos = input('videos')
-        step_folder = self._step_folder_path(name)
-        tiff_files = []
-        for in_file in input_videos:
-            tiff_file = self._isx.make_output_file_paths([in_file], step_folder, 'tiff', 'tiff')[0]
-            self._isx.export_movie_to_tiff([in_file], [tiff_file])
-            tiff_files.append(tiff_file)
-            print(f"Exported movie to file {tiff_file}")
-        return self
-
-
-    def export_movie_to_nwb(self, name="Export Movie to NWB"):
+    def export_movies_to_tiff(self, name="Export Movie to TIFF"):
         def wrapped_step(input):
-            input_videos = input('videos')
+            tiff_files = []
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'TIFF')
             step_folder = self._step_folder_path(name)
-            nwb_files = []
-            for in_file in input_videos:
-                nwb_file = self._isx.make_output_file_paths([in_file], step_folder, 'nwb', 'nwb')[0]
-                self._isx.export_movie_to_nwb([in_file], [nwb_file])
-                nwb_files.append(nwb_file)
-            return {'nwb': nwb_files}
+
+            for in_file, out_file in input_output_pairs:
+                video_name = os.path.splitext(os.path.basename(in_file))[0]
+                tiff_file = os.path.join(step_folder, f'{video_name}.tiff')
+                self._isx.export_movie_to_tiff([in_file], tiff_file, write_invalid_frames=False)
+                tiff_files.append(tiff_file)
+
+            return {'tiff': [out_file for _, out_file in input_output_pairs]}
+
+        return self.step(name, lambda input: wrapped_step(input))
+
+    def export_movies_to_nwb(self, name="Export Movie to NWB"):
+        def wrapped_step(input):
+            tiff_files = []
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'TIFF')
+            step_folder = self._step_folder_path(name)
+
+            for in_file, out_file in input_output_pairs:
+                video_name = os.path.splitext(os.path.basename(in_file))[0]
+                tiff_file = os.path.join(step_folder, f'{video_name}.nwb')
+                self._isx.export_movie_to_nwb([in_file], tiff_file)
+                tiff_files.append(tiff_file)
+
+            return {'nwb': [out_file for _, out_file in input_output_pairs]}
+
+        return self.step(name, lambda input: wrapped_step(input))
 
     def _step_folder_path(self, step_name):
         steps = list(self._logger.read_json_from_file().keys())
@@ -197,7 +213,7 @@ class ISXPipeline(CIPipe):
     def _match_events_to_cellsets(self, cellsets, events):
         # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
         # Exact prefix match: event basename must be f"{cellset_basename}-ED"
-        event_by_base = { self._basename_no_ext(ev): ev for ev in events }
+        event_by_base = {self._basename_no_ext(ev): ev for ev in events}
         matches = {}
         unmatched_cellsets = []
         for cs in cellsets:
