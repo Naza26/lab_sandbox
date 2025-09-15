@@ -3,6 +3,8 @@ import shutil
 
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
+from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
+from logger.file_logger import FileLogger
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
