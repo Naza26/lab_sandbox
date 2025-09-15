@@ -28,6 +28,7 @@ class CIPipe:
         new_pipeline._steps = list(self._steps)
         return new_pipeline
 
+
     def output(self):
         return self.next_step_input()
 

@@ -18,6 +18,9 @@ class TraceBuilder:
 
     @staticmethod
     def build_steps_from_trace(trace: dict, branch_name: str):
+        # Si se pasa un nombre de rama (branch_name) y existe en el trace, usamos los pasos de esa rama.
+        # Si no se pasa nombre de rama, pero el trace contiene solo una rama (un único key en el dict),
+        # asumimos que se quiere usar esa única rama de forma implícita.
         if branch_name and branch_name in trace:
             steps_data = trace[branch_name]
         else:

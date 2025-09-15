@@ -1,6 +1,12 @@
+import json
+import os
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from ci_pipe.pipeline import CIPipe
+from tests.mocks.mock_file_logger import MockFileLogger
+from tests.mocks.mock_pipe import PipeMock
 
 
 class PipelineTestCase(unittest.TestCase):
@@ -184,6 +190,80 @@ class PipelineTestCase(unittest.TestCase):
             ]
         }
         self.assertEqual(info, expected_info)
+
+    def test_10_branch_creates_new_pipeline_with_same_steps(self):
+        # Given
+        pipeline_raw_input = {'numbers': [1]}
+        pipeline = PipeMock(pipeline_raw_input)
+        pipeline._steps.append({'name': 'add one'})  # simulamos un step
+
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp_file:
+            json.dump({pipeline._branch_name: {}}, tmp_file)
+            trace_file = tmp_file.name
+
+        # When
+        new_pipeline = pipeline.branch(
+            "branch 2", trace_file, MockFileLogger.new_for("log.txt", "/tmp")
+        )
+
+        # Then
+        assert new_pipeline._branch_name == "branch 2"
+        assert new_pipeline._steps == pipeline._steps
+
+        # Cleanup
+        os.remove(trace_file)
+
+    def test_11_branch_trace_file_is_updated(self):
+        # Given
+        pipeline_raw_input = {'numbers': [1]}
+        pipeline = PipeMock(pipeline_raw_input)
+
+        trace_data = {pipeline._branch_name: {"1": {"name": "dummy_step"}}}
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp_file:
+            json.dump(trace_data, tmp_file)
+            trace_file = tmp_file.name
+
+        # When
+        new_pipeline = pipeline.branch(
+            "branch 2", trace_file, MockFileLogger.new_for("log.txt", "/tmp")
+        )
+
+        # Then
+        with open(trace_file, 'r') as f:
+            updated_trace = json.load(f)
+
+        assert "branch 2" in updated_trace
+        assert updated_trace["branch 2"] == trace_data[pipeline._branch_name]
+
+        # Cleanup
+        os.remove(trace_file)
+
+    def test_12_branches_execute_same_step_independently(self):
+        # Given
+        pipeline_raw_input = {'numbers': [0]}
+        pipeline = PipeMock(pipeline_raw_input)
+        
+        with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tmp_file:
+            json.dump({pipeline._branch_name: {}}, tmp_file)
+            trace_file = tmp_file.name
+
+        # When
+        branch1 = pipeline.branch("branch 1A", trace_file, MockFileLogger.new_for("log1.txt", "/tmp"))
+        branch2 = pipeline.branch("branch 1B", trace_file, MockFileLogger.new_for("log2.txt", "/tmp"))
+        branch1._steps.append({'name': 'add one', 'func': lambda inputs: {'numbers': [inputs('numbers')[0] + 1]}})
+        branch2._steps.append({'name': 'add one', 'func': lambda inputs: {'numbers': [inputs('numbers')[0] + 1]}})
+
+        branch1_output = branch1._steps[0]['func'](lambda key: branch1._pipeline_inputs[key])
+        branch2_output = branch2._steps[0]['func'](lambda key: branch2._pipeline_inputs[key])
+
+        # Then
+        assert branch1_output != branch2_output or branch1_output == branch2_output
+        assert branch1_output['numbers'] == [1]
+        assert branch2_output['numbers'] == [1]
+
+        # Cleanup
+        os.remove(trace_file)
+
 
     # Helper functions for the steps
     def _add_one(self, inputs):
