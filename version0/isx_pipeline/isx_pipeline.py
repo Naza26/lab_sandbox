@@ -159,7 +159,7 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
             self.last_parameters = {}
-            #self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -169,14 +169,14 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
             self.get_parameters(name, **kwargs)
-            #self._process_input_output_pairs(
-            #     input_output_pairs,
-            #     lambda i, o: self._isx.spatial_filter(
-            #         i, o,
-            #         low_cutoff=self.last_parameters['low_cutoff'],
-            #         high_cutoff=self.last_parameters['high_cutoff']
-            #     )
-            # )
+            self._process_input_output_pairs(
+                 input_output_pairs,
+                 lambda i, o: self._isx.spatial_filter(
+                     i, o,
+                     low_cutoff=self.last_parameters['low_cutoff'],
+                     high_cutoff=self.last_parameters['high_cutoff']
+                 )
+             )
                  
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
@@ -222,8 +222,8 @@ class ISXPipeline(CIPipe):
             self.get_parameters(name, **kwargs)
 
 
-            #self._process_input_output_pairs(input_output_pairs,
-            #    lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
+            self._process_input_output_pairs(input_output_pairs,
+                lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
 
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 

@@ -3,8 +3,6 @@ from rich.table import Table # type: ignore
 from rich.panel import Panel # type: ignore
 import json
 
-import yaml
-
 class Status:
     def __init__(self, trace):
         self._trace_file = trace

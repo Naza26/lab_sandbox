@@ -52,6 +52,14 @@ class FileLogger:
         
 
     def show(self):
+        """
+        Recorre todo el trace de ejecucion de la pipeline y construye un arbol de nodos
+        que refleja la secuencia de steps en cada branch.
+        Cada branch se procesa por separado, pero los nodos que dependen de outputs
+        de otros branches se enlazan con su parent correspondiente.
+        El metodo imprime el arbol resultante mostrando como se intercalan las ramas
+        y steps segun la ejecucion.
+        """
         trace_json = self.all_logs_as_json()
         nodes = {}
 
