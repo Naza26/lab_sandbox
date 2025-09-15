@@ -1,7 +1,5 @@
 import json
 import os
-from graphviz import Digraph # type: ignore
-from rich.console import Console # type: ignore
 from anytree import Node, RenderTree # type: ignore
 
 

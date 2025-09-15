@@ -1,11 +1,32 @@
+import json
 from ci_pipe.step import Step
 
 class CIPipe:
-    def __init__(self, inputs):
+    def __init__(self, inputs, branch_name = "branch 1"):
         self._pipeline_inputs = inputs
         self._steps = []
         # TODO: read from file? here or ISX?
         self._defaults = {}
+        self._branch_name = branch_name
+
+    def branch(self, branch_name, trace_file, logger):
+        new_pipeline = self.__class__(
+            inputs=self._pipeline_inputs,
+            logger=logger,
+            _branch_name=branch_name
+        )
+
+        with open(trace_file, "r") as f:
+            trace = json.load(f)
+
+        if self._branch_name in trace:
+            base_branch_trace = trace[self._branch_name]
+            trace[branch_name] = dict(base_branch_trace)
+            with open(trace_file, "w") as f:
+                json.dump(trace, f, indent=4)
+
+        new_pipeline._steps = list(self._steps)
+        return new_pipeline
 
     def output(self):
         return self.next_step_input()

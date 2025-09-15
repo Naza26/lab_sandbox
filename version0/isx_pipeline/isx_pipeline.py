@@ -4,9 +4,6 @@ import os
 import shutil
 from typing import ClassVar, Any
 from isx_pipeline.status import Status
-from rich.console import Console # type: ignore
-from rich.table import Table # type: ignore
-from rich.panel import Panel # type: ignore
 
 import yaml
 
@@ -21,7 +18,7 @@ class ISXPipeline(CIPipe):
     isx_package: ClassVar[Any] = importlib.import_module("isx")
 
     def __init__(self, inputs, logger, branch_name = "branch 1"):
-        super().__init__(inputs)
+        super().__init__(inputs, branch_name)
         self.inputs = inputs
         self._isx = self.__class__.isx_package
         self._logger = logger
@@ -29,42 +26,26 @@ class ISXPipeline(CIPipe):
         self._trace_file = self._logger.filepath()
         self._steps = []
         self.last_parameters = {}
-        self.branch_name = branch_name
         self._status = Status(self._trace_file)
         self.defaults = self.read_config()
         self._completed_step_names = set()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(
                 self._logger.read_json_from_file(),
-                branch_name=self.branch_name
+                branch_name=branch_name
             )
             self._completed_step_names = set(step.info()["name"] for step in self._steps)
 
     @classmethod
-    def new(cls, input_directory, logger, branch_name = "branch 1"):
+    def new(cls, input_directory, logger, _branch_name = "branch 1"):
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
-        return cls(inputs, logger, branch_name)
+        return cls(inputs, logger, _branch_name)
 
 
-    def branch(self, branch_name):
-        new_pipeline = ISXPipeline(
-            inputs=self.inputs,
-            logger=self._logger,
-            branch_name=branch_name
-        )
-        with open(self._trace_file, "r") as f:
-            trace = json.load(f)
-
-        if self.branch_name in trace:
-            base_branch_trace = trace[self.branch_name]
-            trace[branch_name] = dict(base_branch_trace)
-            with open(self._trace_file, "w") as f:
-                json.dump(trace, f, indent=4)
-
-        new_pipeline._steps = list(self._steps)
-        return new_pipeline
+    def branch(self, _branch_name):
+        return super().branch(_branch_name, self._trace_file, self._logger)
 
 
     @classmethod
@@ -87,20 +68,20 @@ class ISXPipeline(CIPipe):
 
 
     def trace(self):
-        self._status.trace(self.branch_name)
+        self._status.trace(self._branch_name)
 
     def info(self, step_number):
-        self._status.info(step_number, self.branch_name)
+        self._status.info(step_number, self._branch_name)
 
 
     def _step_folder_path(self, step_name):
         with open(self._trace_file, "r") as f:
             trace = json.load(f)
         
-        branch_trace = trace.get(self.branch_name, {})
+        branch_trace = trace.get(self._branch_name, {})
         step_index = len(branch_trace) + 1
 
-        step_folder_name = f"{self.branch_name} - step {step_index} - {step_name}"
+        step_folder_name = f"{self._branch_name} - step {step_index} - {step_name}"
         return os.path.join(self._output_folder, step_folder_name)
 
 
@@ -108,9 +89,9 @@ class ISXPipeline(CIPipe):
         step_info = self._steps[-1].info()
         with open(self._trace_file, "r") as f:
             trace = json.load(f)
-        if self.branch_name not in trace:
-            trace[self.branch_name] = {}
-        self._add_step_to_trace(step_info, trace[self.branch_name])
+        if self._branch_name not in trace:
+            trace[self._branch_name] = {}
+        self._add_step_to_trace(step_info, trace[self._branch_name])
 
         with open(self._trace_file, "w") as f:
             json.dump(trace, f, indent=4)
@@ -178,7 +159,7 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
             self.last_parameters = {}
-            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            #self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, lambda input: wrapped_step(input))
@@ -188,14 +169,14 @@ class ISXPipeline(CIPipe):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
             self.get_parameters(name, **kwargs)
-            self._process_input_output_pairs(
-                 input_output_pairs,
-                 lambda i, o: self._isx.spatial_filter(
-                     i, o,
-                     low_cutoff=self.last_parameters['low_cutoff'],
-                     high_cutoff=self.last_parameters['high_cutoff']
-                 )
-             )
+            #self._process_input_output_pairs(
+            #     input_output_pairs,
+            #     lambda i, o: self._isx.spatial_filter(
+            #         i, o,
+            #         low_cutoff=self.last_parameters['low_cutoff'],
+            #         high_cutoff=self.last_parameters['high_cutoff']
+            #     )
+            # )
                  
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
@@ -241,8 +222,8 @@ class ISXPipeline(CIPipe):
             self.get_parameters(name, **kwargs)
 
 
-            self._process_input_output_pairs(input_output_pairs,
-                lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
+            #self._process_input_output_pairs(input_output_pairs,
+            #    lambda i, o: self._isx.dff(i, o, f0_type=self.last_parameters['f0_type']))
 
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 

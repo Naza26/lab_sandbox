@@ -19,7 +19,7 @@ class Status:
             step = trace[branch][step_number]
         except KeyError:
             console.print(
-                f"[bold red]❌ Step {step_number} not found in branch '{branch}'[/bold red]"
+                f"[bold red] Step {step_number} not found in branch '{branch}'[/bold red]"
             )
             return
         table = Table(
@@ -43,10 +43,10 @@ class Status:
                 full_trace = json.load(f)
             branch_trace = full_trace.get(branch_name)
             if branch_trace is None:
-                console.print(f"[bold red]❌ Branch '{branch_name}' not found[/bold red]")
+                console.print(f"[bold red] Branch '{branch_name}' not found[/bold red]")
                 return
         except Exception as e:
-            console.print(f"[bold red]❌ Error loading trace: {e}[/bold red]")
+            console.print(f"[bold red] Error loading trace: {e}[/bold red]")
             return
 
         steps_ordered = sorted(branch_trace.keys(), key=int)
