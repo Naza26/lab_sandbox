@@ -1,39 +1,33 @@
-import importlib
-import json
 import os
 import shutil
-from typing import ClassVar, Any
 
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
-from logger.file_logger import FileLogger
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
 
 class ISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
-    isx_package: ClassVar[Any] = importlib.import_module("isx")
 
-    def __init__(self, inputs, logger):
+    def __init__(self, isx, inputs, logger):
         super().__init__(inputs)
-        self._isx = self.__class__.isx_package
+        self._isx = isx
         self._logger = logger
-        self._output_folder = self._logger.directory()
-        self._steps = []
         self._completed_step_names = set()
+        self.available_algorithms = AvailableISXAlgorithms
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
-            self._completed_step_names = set(step.info()["name"] for step in self._steps)
+            self._completed_step_names = set(step.name() for step in self._steps)
 
     @classmethod
-    def new(cls, input_directory, logger=None):
+    def new(cls, isx, input_directory, logger=None):
         if not logger:
             logger = FileLogger.new_for("trace.json", "output")
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
-        return cls(inputs, logger)
+        return cls(isx, inputs, logger)
 
     @classmethod
     def _scan_files(cls, input_folder: str):
@@ -54,7 +48,7 @@ class ISXPipeline(CIPipe):
         return result
 
     def trace(self):
-        self._logger.read_json_from_file()
+        return self._logger.all_logs()
 
     def preprocess_videos(self, name="Preprocess Videos"):
         def wrapped_step(input):
@@ -188,7 +182,7 @@ class ISXPipeline(CIPipe):
         steps = list(self._logger.read_json_from_file().keys())
         last_step_index_from_trace = int(steps[-1]) if steps else 0
         step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
-        return build_filesystem_path_from(self._output_folder, step_folder_name)
+        return build_filesystem_path_from(self._logger.directory(), step_folder_name)
 
     def _update_trace(self):
         trace = TraceBuilder.build_dictionary_trace_from(self._steps)
