@@ -3,7 +3,7 @@ import os
 
 from utils import create_directory_from, build_filesystem_path_from
 
-
+## Maybe have a superclass to facilitate extensibility and new custom loggers
 class FileLogger:
     @classmethod
     def new_for(cls, filename, directory):
