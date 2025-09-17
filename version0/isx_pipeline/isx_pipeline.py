@@ -167,7 +167,7 @@ class ISXPipeline(CIPipe):
     def export_movies_to_nwb(self, name="Export Movie to NWB"):
         def wrapped_step(input):
             tiff_files = []
-            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'TIFF')
+            input_output_pairs = self._input_and_output_files(input, 'videos', name, 'NWB')
             step_folder = self._step_folder_path(name)
 
             for in_file, out_file in input_output_pairs:
