@@ -98,7 +98,7 @@ class ISXPipeline(CIPipe):
 
         return self.step(name, lambda input: wrapped_step(input))
 
-    def normalize_dff_videos(self, name="Normalize dF/F Videos"):
+    def normalize_dff_videos(self, name="Normalize dF-F Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'DFF')
             self._process_input_output_pairs(input_output_pairs, lambda i, o: self._isx.dff(i, o, f0_type='mean'))
