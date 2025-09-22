@@ -4,6 +4,7 @@ import shutil
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
 from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
+from isx_pipeline.config.isx_config import ISXConfig
 from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
     is_content_available_in
 
@@ -17,6 +18,7 @@ class ISXPipeline(CIPipe):
         self._logger = logger
         self._completed_step_names = set()
         self.available_algorithms = AvailableISXAlgorithms
+        self._config = ISXConfig()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
             self._completed_step_names = set(step.name() for step in self._steps)
@@ -60,6 +62,7 @@ class ISXPipeline(CIPipe):
     def bandpass_filter_videos(self, name="Bandpass Filter Videos"):
         def wrapped_step(input):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
+            parameters = self._config.get_parameters(self.available_algorithms.BANDPASS_FILTER_VIDEOS.value)
             self._process_input_output_pairs(input_output_pairs,
                                              lambda i, o: self._isx.spatial_filter(i, o, low_cutoff=0.005,
                                                                                    high_cutoff=0.5))
