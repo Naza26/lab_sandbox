@@ -40,10 +40,14 @@ class ISXPipeline(CIPipe):
         new_pipe._completed_step_names = set(self._completed_step_names)
         new_pipe.available_algorithms = self.available_algorithms
         new_pipe._config = self._config
+        new_pipe._plotter = self._plotter
         return new_pipe
     
     def info(self, step_number):
         self._plotter.get_step_info(self._logger.read_json_from_file(), step_number, self._branch_name)
+
+    def trace(self):
+        self._plotter.get_all_trace_from_branch(self._logger.read_json_from_file(), self._branch_name)
 
     @classmethod
     def _scan_files(cls, input_folder: str):
@@ -62,9 +66,6 @@ class ISXPipeline(CIPipe):
         self._update_trace()
         self._completed_step_names.add(step_name)
         return result
-
-    def trace(self):
-        return self._logger.all_logs()
 
 
     def _step_folder_path(self, step_name):
@@ -138,7 +139,7 @@ class ISXPipeline(CIPipe):
         parameters = self._config.get_parameters(self.available_algorithms.PREPROCESS_VIDEOS.value)
         def wrapped_step(input, **parameters):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'PP')
-            self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
+            #self._process_input_output_pairs(input_output_pairs, self._isx.preprocess)
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, wrapped_step, **parameters)
@@ -147,6 +148,7 @@ class ISXPipeline(CIPipe):
         parameters = self._config.get_parameters(self.available_algorithms.BANDPASS_FILTER_VIDEOS.value, **kwargs)
         def wrapped_step(input, **parameters):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'BP')
+            """
             self._process_input_output_pairs(
                  input_output_pairs,
                  lambda i, o: self._isx.spatial_filter(
@@ -154,7 +156,7 @@ class ISXPipeline(CIPipe):
                     low_cutoff=parameters['low_cutoff'],
                     high_cutoff=parameters['high_cutoff']
                 )
-            )
+            )"""
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, wrapped_step, **parameters)
@@ -196,10 +198,11 @@ class ISXPipeline(CIPipe):
         parameters = self._config.get_parameters(self.available_algorithms.NORMALIZE_DFF_VIDEOS.value, **kwargs)
         def wrapped_step(input, **parameters):
             input_output_pairs = self._input_and_output_files(input, 'videos', name, 'DFF')
+            """
             self._process_input_output_pairs(
                 input_output_pairs,
                 lambda i, o: self._isx.dff(i, o, f0_type=parameters['f0_type'])
-            )
+            )"""
             return {'videos': [out_file for _, out_file in input_output_pairs]}
 
         return self.step(name, wrapped_step, **parameters)
@@ -212,13 +215,13 @@ class ISXPipeline(CIPipe):
             cellsets = []
 
             def pca_ica_fn(i, o):
-                self._isx.pca_ica(
+                """self._isx.pca_ica(
                     i,
                     o,
                     parameters['num_components'],
                     parameters['num_iterations'],
                     block_size=parameters['block_size']
-                )
+                )"""
                 cellsets.append(o[0])
 
             self._process_input_output_pairs(input_output_pairs, pca_ica_fn)

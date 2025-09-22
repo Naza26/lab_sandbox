@@ -1,5 +1,7 @@
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
+
 
 class Plotter:
     def __init__(self, console=None):
@@ -34,3 +36,31 @@ class Plotter:
             table.add_row("Parameters", params)
 
         return table
+    
+    def get_all_trace_from_branch(self, trace, branch):
+        branch_trace = trace.get(branch)
+        if not branch_trace:
+            self.console.print(f"[bold red]Branch '{branch}' not found[/bold red]")
+            return
+
+        steps_ordered = sorted(branch_trace.keys(), key=int)
+        items = self._build_trace_panels(branch_trace, steps_ordered)
+
+        self.console.print(f"\n[bold underline]Pipeline Trace of branch: {branch}[/bold underline]\n")
+        self.console.print(*items, justify="center")
+
+    def _build_trace_panels(self, branch_trace, steps_ordered):
+        panels = [
+            Panel(
+                f"Step {step_number}\n{branch_trace[step_number].get('algorithm', f'Step {step_number}')}",
+                padding=(1, 2)
+            )
+            for step_number in steps_ordered
+        ]
+
+        items = []
+        for i, p in enumerate(panels):
+            items.append(p)
+            if i < len(panels) - 1:
+                items.append("⬇")
+        return items
