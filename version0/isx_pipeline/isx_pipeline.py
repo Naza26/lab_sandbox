@@ -12,23 +12,34 @@ from utils import build_filesystem_path_from, create_directory_from, list_direct
 class ISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
 
-    def __init__(self, isx, inputs, logger):
-        super().__init__(inputs)
+    def __init__(self, isx, inputs, logger, branch_name = "branch 1"):
+        super().__init__(inputs, branch_name)
         self._isx = isx
         self._logger = logger
         self._completed_step_names = set()
         self.available_algorithms = AvailableISXAlgorithms
         self._config = ISXConfig()
         if not self._logger.is_empty():
-            self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file())
+            self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file(), self._branch_name)
             self._completed_step_names = set(step.name() for step in self._steps)
 
     @classmethod
-    def new(cls, isx, input_directory, logger):
+    def new(cls, isx, input_directory, logger, branch_name = "branch 1"):
         if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
         inputs = cls._scan_files(input_directory)
-        return cls(isx, inputs, logger)
+        return cls(isx, inputs, logger, branch_name)
+    
+    def branch(self, branch_name):
+        new_pipe = super().branch(branch_name)
+        new_pipe.__class__ = ISXPipeline
+        new_pipe._isx = self._isx
+        new_pipe._logger = self._logger
+        new_pipe._completed_step_names = set(self._completed_step_names)
+        new_pipe.available_algorithms = self.available_algorithms
+        new_pipe._config = self._config
+        return new_pipe
+    
 
     @classmethod
     def _scan_files(cls, input_folder: str):
@@ -50,6 +61,74 @@ class ISXPipeline(CIPipe):
 
     def trace(self):
         return self._logger.all_logs()
+
+
+    def _step_folder_path(self, step_name):
+        steps_count = len(self._steps)
+        step_folder_name = f"{self._branch_name}: step {steps_count + 1} - {step_name}"
+        return build_filesystem_path_from(self._logger.directory(), step_folder_name)
+
+
+    def _update_trace(self):
+        all_trace = self._logger.read_json_from_file() or {}
+        all_trace[self._branch_name] = TraceBuilder.build_dictionary_trace_from(self._steps, self._branch_name)
+        self._logger.write_json_to_file(all_trace)
+
+    def _input_and_output_files(self, input, input_key, step_name, output_suffix):
+        input_files = input(input_key)
+        step_folder = self._step_folder_path(step_name)
+        input_output_pairs = []
+        for in_file in input_files:
+            out_file = self._isx.make_output_file_paths([in_file], step_folder, output_suffix)[0]
+            input_output_pairs.append((in_file, out_file))
+        return input_output_pairs
+
+    def _process_input_output_pairs(self, input_output_pairs, fn):
+        for in_file, out_file in input_output_pairs:
+            fn([in_file], [out_file])
+
+    def _basename_no_ext(self, path):
+        return os.path.splitext(os.path.basename(path))[0]
+
+    def _match_events_to_cellsets(self, cellsets, events):
+        # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
+        # Exact prefix match: event basename must be f"{cellset_basename}-ED"
+        event_by_base = {self._basename_no_ext(ev): ev for ev in events}
+        matches = {}
+        unmatched_cellsets = []
+        for cs in cellsets:
+            cs_base = self._basename_no_ext(cs)
+            expected_event_base = f"{cs_base}-ED"
+            ev = event_by_base.get(expected_event_base)
+            if ev:
+                matches[cs] = ev
+            else:
+                unmatched_cellsets.append(cs)
+        used_events = set(matches.values())
+        unmatched_events = [ev for ev in events if ev not in used_events]
+        if unmatched_cellsets:
+            print("[auto_accept_reject] UNMATCHED CELLSETS:")
+            for cs in unmatched_cellsets:
+                print(f"  - {os.path.basename(cs)}")
+        if unmatched_events:
+            print("[auto_accept_reject] UNMATCHED EVENTS:")
+            for ev in unmatched_events:
+                print(f"  - {os.path.basename(ev)}")
+        return matches
+
+    def _copy_files_to_step_folder(self, files, step_name):
+        step_folder = self._step_folder_path(step_name)
+        copied_files = []
+        for file in files:
+            dest = build_filesystem_path_from(step_folder, last_part_of_path(file))
+            shutil.copy2(file, dest)
+            copied_files.append(dest)
+        return copied_files
+
+
+# ===============================
+#         ISX ALGORITHMS
+# ===============================
 
     def preprocess_videos(self, name="Preprocess Videos"):
         parameters = self._config.get_parameters(self.available_algorithms.PREPROCESS_VIDEOS.value)
@@ -174,64 +253,3 @@ class ISXPipeline(CIPipe):
             return {'cellsets': copied_cellsets}
 
         return self.step(name, wrapped_step, **parameters)
-
-    def _step_folder_path(self, step_name):
-        steps = list(self._logger.read_json_from_file().keys())
-        last_step_index_from_trace = int(steps[-1]) if steps else 0
-        step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
-        return build_filesystem_path_from(self._logger.directory(), step_folder_name)
-
-    def _update_trace(self):
-        trace = TraceBuilder.build_dictionary_trace_from(self._steps)
-        self._logger.write_json_to_file(trace)
-
-    def _input_and_output_files(self, input, input_key, step_name, output_suffix):
-        input_files = input(input_key)
-        step_folder = self._step_folder_path(step_name)
-        input_output_pairs = []
-        for in_file in input_files:
-            out_file = self._isx.make_output_file_paths([in_file], step_folder, output_suffix)[0]
-            input_output_pairs.append((in_file, out_file))
-        return input_output_pairs
-
-    def _process_input_output_pairs(self, input_output_pairs, fn):
-        for in_file, out_file in input_output_pairs:
-            fn([in_file], [out_file])
-
-    def _basename_no_ext(self, path):
-        return os.path.splitext(os.path.basename(path))[0]
-
-    def _match_events_to_cellsets(self, cellsets, events):
-        # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
-        # Exact prefix match: event basename must be f"{cellset_basename}-ED"
-        event_by_base = {self._basename_no_ext(ev): ev for ev in events}
-        matches = {}
-        unmatched_cellsets = []
-        for cs in cellsets:
-            cs_base = self._basename_no_ext(cs)
-            expected_event_base = f"{cs_base}-ED"
-            ev = event_by_base.get(expected_event_base)
-            if ev:
-                matches[cs] = ev
-            else:
-                unmatched_cellsets.append(cs)
-        used_events = set(matches.values())
-        unmatched_events = [ev for ev in events if ev not in used_events]
-        if unmatched_cellsets:
-            print("[auto_accept_reject] UNMATCHED CELLSETS:")
-            for cs in unmatched_cellsets:
-                print(f"  - {os.path.basename(cs)}")
-        if unmatched_events:
-            print("[auto_accept_reject] UNMATCHED EVENTS:")
-            for ev in unmatched_events:
-                print(f"  - {os.path.basename(ev)}")
-        return matches
-
-    def _copy_files_to_step_folder(self, files, step_name):
-        step_folder = self._step_folder_path(step_name)
-        copied_files = []
-        for file in files:
-            dest = build_filesystem_path_from(step_folder, last_part_of_path(file))
-            shutil.copy2(file, dest)
-            copied_files.append(dest)
-        return copied_files

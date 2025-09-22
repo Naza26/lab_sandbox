@@ -17,7 +17,4 @@ class ISXConfig:
             return yaml.safe_load(f) or {}
 
     def get_parameters(self, name, **kwargs):
-        params = dict(self.defaults.get(name, {}))
-        if kwargs:
-            params.update(kwargs)
-        return params
+        return {**(self.defaults.get(name) or {}), **kwargs}
