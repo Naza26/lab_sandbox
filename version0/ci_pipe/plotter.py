@@ -1,6 +1,8 @@
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from anytree import Node, RenderTree
+
 
 
 class Plotter:
@@ -64,3 +66,63 @@ class Plotter:
             if i < len(panels) - 1:
                 items.append("⬇")
         return items
+    
+    def get_all_trace(self, trace, branch):
+        self.convert_trace_to_tree(trace, branch)
+
+    def convert_trace_to_tree(self, trace, highlight_branch=None):
+        nodes = {}
+        first_branch = list(trace.keys())[0]
+        previous_node = None
+
+        for step_num, step_info in sorted(trace[first_branch].items(), key=lambda x: int(x[0])):
+            node_name = f"{first_branch}: step {step_num} - {step_info['algorithm']}"
+            if highlight_branch and first_branch == highlight_branch:
+                node_name = f"[yellow]{node_name}[/yellow]"
+            node = Node(node_name)
+            nodes[(first_branch, step_num)] = node
+            if previous_node:
+                node.parent = previous_node
+            previous_node = node
+
+        for branch in list(trace.keys())[1:]:
+            steps = sorted(trace[branch].items(), key=lambda x: int(x[0]))
+            start_node = None
+
+            for step_num, step_info in steps:
+                outputs = step_info.get("output", [])
+                if not any(branch in out for out in outputs):
+                    continue
+
+                node_name = f"{branch}: step {step_num} - {step_info['algorithm']}"
+                if highlight_branch and branch == highlight_branch:
+                    node_name = f"[yellow]{node_name}[/yellow]"
+                node = Node(node_name)
+                nodes[(branch, step_num)] = node
+
+                if start_node is None:
+                    inputs = step_info.get("input", [])
+                    for inp in inputs:
+                        for key, parent_node in nodes.items():
+                            branch_key, step_key = key
+                            if branch_key in inp and f"step {step_key}" in inp:
+                                node.parent = parent_node
+                                start_node = node
+                                break
+                        if start_node:
+                            break
+                    if start_node is None:
+                        start_node = node
+                else:
+                    node.parent = start_node
+                    start_node = node
+
+        root = nodes[(first_branch, "1")]
+
+        tree_lines = [f"{pre}{node.name}" for pre, _, node in RenderTree(root)]
+        tree_str = "\n".join(tree_lines)
+
+        console = Console()
+        console.print(tree_str)
+
+        return root
