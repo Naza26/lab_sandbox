@@ -185,6 +185,20 @@ class PipelineTestCase(unittest.TestCase):
         }
         self.assertEqual(info, expected_info)
 
+    def test_10_branch_returns_a_new_pipeline_object(self):
+        # Given
+        pipeline_raw_input = {'numbers': [1]}
+
+        # When
+        pipe = CIPipe(pipeline_raw_input)
+        other_pipe = pipe.branch("new_branch")
+
+        # Then
+        self.assertIsNot(pipe, other_pipe)
+        self.assertEqual(pipe.output(), {'numbers': [1]})
+        self.assertEqual(other_pipe.output(), {'numbers': [1]})
+
+
     # Helper functions for the steps
     def _add_one(self, inputs):
         return {'numbers': [inputs('numbers')[0] + 1]}

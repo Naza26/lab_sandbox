@@ -7,6 +7,14 @@ class CIPipe:
         # TODO: read from file? here or ISX?
         self._defaults = {}
 
+    def branch(self, branch_name=None):
+        new_pipe = CIPipe(self._pipeline_inputs.copy())
+
+        new_pipe._steps = list(self._steps)
+        new_pipe._defaults = self._defaults.copy()
+
+        return new_pipe
+
     def output(self):
         return self.next_step_input()
 
