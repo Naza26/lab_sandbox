@@ -5,6 +5,7 @@ from ci_pipe.step import Step
 class TraceBuilder:
     @staticmethod
     def build_dictionary_trace_from(steps: List[Step]):
+        print(steps)
         trace = {}
         for step_index, step in enumerate(steps, 1):
             step_input = step.input()
@@ -12,7 +13,8 @@ class TraceBuilder:
             trace[str(step_index)] = {
                 "algorithm": step.name(),
                 "input": [item for v in step_input.values() for item in v],
-                "output": [item for v in step_output.values() for item in v]
+                "output": [item for v in step_output.values() for item in v],
+                "parameters": step._kwargs
             }
         return trace
 
