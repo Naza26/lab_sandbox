@@ -75,7 +75,7 @@ class ISXPipeline(CIPipe):
 
     def _update_trace(self):
         all_trace = self._logger.read_json_from_file() or {}
-        all_trace[self._branch_name] = TraceBuilder.build_dictionary_trace_from(self._steps, self._branch_name)
+        all_trace[self._branch_name] = TraceBuilder.build_dictionary_trace_from(self._steps)
         self._logger.write_json_to_file(all_trace)
 
     def _input_and_output_files(self, input, input_key, step_name, output_suffix):
