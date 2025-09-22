@@ -41,6 +41,20 @@ class TestISXConfig(unittest.TestCase):
         params = self.config.get_parameters("Nonexistent Algorithm")
         self.assertEqual(params, {})
 
+    def test_get_parameters_override_kwargs(self):
+        params = self.config.get_parameters(
+            AvailableISXAlgorithms.BANDPASS_FILTER_VIDEOS.value,
+            low_cutoff=0.8
+        )
+        expected = {'low_cutoff': 0.8, 'high_cutoff': 0.5}
+        self.assertEqual(params, expected)
+
+    def test_get_parameters_without_kwargs(self):
+        params = self.config.get_parameters(
+            AvailableISXAlgorithms.BANDPASS_FILTER_VIDEOS.value
+        )
+        expected = {'low_cutoff': 0.005, 'high_cutoff': 0.5}
+        self.assertEqual(params, expected)
 
 if __name__ == "__main__":
     unittest.main()
