@@ -1,11 +1,21 @@
 from ci_pipe.step import Step
 
 class CIPipe:
-    def __init__(self, inputs):
+    def __init__(self, inputs, branch_name = "branch 1"):
         self._pipeline_inputs = inputs
         self._steps = []
         # TODO: read from file? here or ISX?
         self._defaults = {}
+        self._branch_name = branch_name
+
+    def branch(self, branch_name=None):
+        new_pipe = CIPipe(self._pipeline_inputs.copy())
+
+        new_pipe._steps = list(self._steps)
+        new_pipe._defaults = self._defaults.copy()
+        new_pipe._branch_name = branch_name
+
+        return new_pipe
 
     def output(self):
         return self.next_step_input()

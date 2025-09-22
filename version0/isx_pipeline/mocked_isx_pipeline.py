@@ -29,8 +29,8 @@ class MockedISXPipeline(CIPipe):
             return {"videos": ["video1.isxd"]}
         return {"videos": []}
 
-    def step(self, step_name, step_function, *args):
-        result = super().step(step_name, step_function)
+    def step(self, step_name, step_function, *args, **kwargs):
+        result = super().step(step_name, step_function, *args, **kwargs)
         self._update_trace()
         self._completed_step_names.add(step_name)
         return result
