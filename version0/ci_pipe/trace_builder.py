@@ -4,18 +4,19 @@ from ci_pipe.step import Step
 
 class TraceBuilder:
     @staticmethod
-    def build_dictionary_trace_from(steps: List[Step], branch_name: str):
-        trace = {branch_name: {}}
+    def build_dictionary_trace_from(steps: List[Step]):
+        branch_trace = {}
         for step_index, step in enumerate(steps, 1):
             step_input = step.input()
             step_output = step.output()
-            trace[branch_name][str(step_index)] = {
+            branch_trace[str(step_index)] = {
                 "algorithm": step.name(),
                 "input": [item for v in step_input.values() for item in v],
                 "output": [item for v in step_output.values() for item in v],
                 "parameters": step._kwargs
             }
-        return trace
+        return branch_trace
+
 
     @staticmethod
     def build_steps_from_trace(trace: dict, branch_name: str):
