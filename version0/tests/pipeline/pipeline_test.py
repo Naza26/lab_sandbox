@@ -198,6 +198,17 @@ class PipelineTestCase(unittest.TestCase):
         self.assertEqual(pipe.output(), {'numbers': [1]})
         self.assertEqual(other_pipe.output(), {'numbers': [1]})
 
+    def test_11_branch_has_expected_branch_name(self):
+        # Given
+        pipeline_raw_input = {'numbers': [2]}
+
+        # When
+        pipe = CIPipe(pipeline_raw_input, "branch_A")
+        branch_b = pipe.branch("branch_B")
+
+        # Then
+        self.assertEqual(pipe._branch_name, "branch_A")
+        self.assertEqual(branch_b._branch_name, "branch_B")
 
     # Helper functions for the steps
     def _add_one(self, inputs):
