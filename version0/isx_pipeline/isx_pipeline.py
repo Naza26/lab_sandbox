@@ -2,6 +2,7 @@ import os
 import shutil
 
 from ci_pipe.pipeline import CIPipe
+from ci_pipe.plotter import Plotter
 from ci_pipe.trace_builder import TraceBuilder
 from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
 from isx_pipeline.config.isx_config import ISXConfig
@@ -19,6 +20,7 @@ class ISXPipeline(CIPipe):
         self._completed_step_names = set()
         self.available_algorithms = AvailableISXAlgorithms
         self._config = ISXConfig()
+        self._plotter = Plotter()
         if not self._logger.is_empty():
             self._steps = TraceBuilder.build_steps_from_trace(self._logger.read_json_from_file(), self._branch_name)
             self._completed_step_names = set(step.name() for step in self._steps)
@@ -40,6 +42,8 @@ class ISXPipeline(CIPipe):
         new_pipe._config = self._config
         return new_pipe
     
+    def info(self, step_number):
+        self._plotter.get_step_info(self._logger.read_json_from_file(), step_number, self._branch_name)
 
     @classmethod
     def _scan_files(cls, input_folder: str):
