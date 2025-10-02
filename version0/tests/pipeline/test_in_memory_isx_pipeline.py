@@ -1,5 +1,6 @@
 import unittest
 
+from in_memory_file_system import InMemoryFileSystem
 from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
 from isx_pipeline.isx_pipeline import ISXPipeline
 from tests.mocks.mock_file_logger import MockFileLogger
@@ -10,6 +11,13 @@ class ISXPipelineTests(unittest.TestCase):
     def setUp(self):
         self._logger = MockFileLogger.new_for("test_01.json", "logs")
         self._isx = MockedISX()
+        self._file_system = InMemoryFileSystem()
+
+        self._file_system.makedirs("logs", exist_ok=True)
+        self._file_system.makedirs("empty_directory", exist_ok=True)
+        self._file_system.makedirs("videos", exist_ok=True)
+        self._file_system.open("videos/a.isxd", 'w')
+        self._file_system.open("videos/b.isxd", 'w')
 
     def test_pipeline_does_not_execute_any_algorithm_if_there_is_no_data_to_run(self):
         empty_input_directory = "empty_directory"
@@ -59,6 +67,7 @@ class ISXPipelineTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as result:
             ISXPipeline.new(
+                self._file_system,
                 self._isx,
                 different_input_directory,
                 self._logger,
@@ -81,7 +90,7 @@ class ISXPipelineTests(unittest.TestCase):
         self._assert_algorithm_was_executed(logged_data, expected_ran_algorithms)
 
     def _build_pipeline_with(self, input_directory):
-        return ISXPipeline.new(self._isx, input_directory, self._logger)
+        return ISXPipeline.new(self._file_system, self._isx, input_directory, self._logger)
 
     def _assert_algorithm_was_executed(self, logged_data, expected_ran_algorithms):
         executed_algorithms = list(logged_data.as_json().values())

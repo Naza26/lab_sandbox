@@ -1,18 +1,14 @@
-import os
-import shutil
-
 from ci_pipe.pipeline import CIPipe
 from ci_pipe.trace_builder import TraceBuilder
 from isx_pipeline.available_isx_algorithms import AvailableISXAlgorithms
-from utils import build_filesystem_path_from, create_directory_from, list_directory_contents, last_part_of_path, \
-    is_content_available_in
 
 
 class ISXPipeline(CIPipe):
     INVALID_INPUT_DIRECTORY_ERROR = "Cannot create new pipeline with different input data in already created output directory"
 
-    def __init__(self, isx, inputs, logger):
+    def __init__(self, file_system, isx, inputs, logger):
         super().__init__(inputs)
+        self._file_system = file_system
         self._isx = isx
         self._logger = logger
         self._completed_step_names = set()
@@ -22,24 +18,19 @@ class ISXPipeline(CIPipe):
             self._completed_step_names = set(step.name() for step in self._steps)
 
     @classmethod
-    def new(cls, isx, input_directory, logger):
-        if not is_content_available_in(input_directory) and is_content_available_in(logger.directory()):
+    def new(cls, file_system, isx, input_directory, logger):
+        if file_system.exists(logger.directory()) and not file_system.exists(input_directory):
             raise ValueError(cls.INVALID_INPUT_DIRECTORY_ERROR)
-        inputs = cls._scan_files(input_directory)
-        return cls(isx, inputs, logger)
-
-    @classmethod
-    def _scan_files(cls, input_folder: str):
-        files = [
-            build_filesystem_path_from(input_folder, f) for f in list_directory_contents(input_folder) if
-            f.endswith('.isxd')]
-        return {"videos": files}
+        files = [file_system.join(input_directory, f) for f in file_system.listdir(input_directory) if
+                 f.endswith('.isxd')]
+        inputs = {'videos': files}
+        return cls(file_system, isx, inputs, logger)
 
     def step(self, step_name, step_function, *args):
         if step_name in self._completed_step_names:
             return None
         step_folder_path = self._step_folder_path(step_name)
-        create_directory_from(step_folder_path)
+        self._file_system.makedirs(step_folder_path)
 
         result = super().step(step_name, step_function, *args)
         self._update_trace()
@@ -76,9 +67,9 @@ class ISXPipeline(CIPipe):
             mean_proj_files = []
             crop_rect_files = []
             for in_file, out_file in input_output_pairs:
-                video_name = os.path.splitext(os.path.basename(in_file))[0]
-                mean_proj_file = os.path.join(step_folder, f'{video_name}-{series_name}-mean_image.isxd')
-                crop_rect_file = os.path.join(step_folder, f'{video_name}-{series_name}-crop_rect.csv')
+                video_name = self._file_system.split_text(self._file_system.base_path(in_file))[0]
+                mean_proj_file = self._file_system.join(step_folder, f'{video_name}-{series_name}-mean_image.isxd')
+                crop_rect_file = self._file_system.join(step_folder, f'{video_name}-{series_name}-crop_rect.csv')
                 translation_file = self._isx.make_output_file_paths([out_file], step_folder, 'translations', 'csv')[0]
                 self._isx.project_movie([in_file], mean_proj_file, stat_type='mean')
                 self._isx.motion_correct([in_file], [out_file], max_translation=20, reference_file_name=mean_proj_file,
@@ -137,7 +128,8 @@ class ISXPipeline(CIPipe):
             filters = [('SNR', '>', 3), ('Event Rate', '>', 0), ('# Comps', '=', 1)]
             matches = self._match_events_to_cellsets(copied_cellsets, input_events)
             for cellset, event_file in matches.items():
-                print(f"[auto_accept_reject] MATCH: {os.path.basename(cellset)} -> {os.path.basename(event_file)}")
+                print(
+                    f"[auto_accept_reject] MATCH: {self._file_system.base_path(cellset)} -> {self._file_system.base_path(event_file)}")
                 self._isx.auto_accept_reject([cellset], [event_file], filters)
             return {'cellsets': copied_cellsets}
 
@@ -147,7 +139,7 @@ class ISXPipeline(CIPipe):
         steps = list(self._logger.read_json_from_file().keys())
         last_step_index_from_trace = int(steps[-1]) if steps else 0
         step_folder_name = f"step {last_step_index_from_trace + 1} - {step_name}"
-        return build_filesystem_path_from(self._logger.directory(), step_folder_name)
+        return self._file_system.join(self._logger.directory(), step_folder_name)
 
     def _update_trace(self):
         trace = TraceBuilder.build_dictionary_trace_from(self._steps)
@@ -167,7 +159,7 @@ class ISXPipeline(CIPipe):
             fn([in_file], [out_file])
 
     def _basename_no_ext(self, path):
-        return os.path.splitext(os.path.basename(path))[0]
+        return self._file_system.splitext(self._file_system.base_path(path))[0]
 
     def _match_events_to_cellsets(self, cellsets, events):
         # This is temporary, we will persist the correspondent inputs so we don't have to match them manually
@@ -188,18 +180,18 @@ class ISXPipeline(CIPipe):
         if unmatched_cellsets:
             print("[auto_accept_reject] UNMATCHED CELLSETS:")
             for cs in unmatched_cellsets:
-                print(f"  - {os.path.basename(cs)}")
+                print(f"  - {self._file_system.base_path(cs)}")
         if unmatched_events:
             print("[auto_accept_reject] UNMATCHED EVENTS:")
             for ev in unmatched_events:
-                print(f"  - {os.path.basename(ev)}")
+                print(f"  - {self._file_system.base_path(ev)}")
         return matches
 
     def _copy_files_to_step_folder(self, files, step_name):
         step_folder = self._step_folder_path(step_name)
         copied_files = []
         for file in files:
-            dest = build_filesystem_path_from(step_folder, last_part_of_path(file))
-            shutil.copy2(file, dest)
+            dest = self._file_system.join(step_folder, self._file_system.base_path(file))
+            self._file_system.copy2(file, dest)
             copied_files.append(dest)
         return copied_files
